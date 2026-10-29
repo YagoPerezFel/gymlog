@@ -102,7 +102,7 @@ const DEFAULT_EX_DATA = [
   ['Bicicleta', 'Cardio', 'c', 'Bicycling_Stationary', '', '', 0, 0, 'bike'],
   ['Remo ergómetro', 'Cardio', 'c', 'Rowing_Stationary', '', '', 0, 0, 'row'],
   ['Comba', 'Cardio', 'c', 'Rope_Jumping', '', '', 0, 0, 'rope'],
-  // Nuevos en la versión 2.1
+  // Nuevos en la versión 0.3
   ['Elíptica', 'Cardio', 'c', '', '', '', 0, 0, 'ellip'],
   ['Escaladora', 'Cardio', 'c', '', '', '', 0, 0, 'stair'],
   // Calistenia — empuje

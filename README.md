@@ -20,7 +20,7 @@ Abre la URL en el móvil:
 Sube el número de versión en `app.js` (`APP_VERSION`) y en `version.json`, y haz `git push`.
 En el móvil: Ajustes → *Buscar nuevas actualizaciones*. Los datos no se borran.
 
-Explicación completa del código: [MANUAL.md](MANUAL.md)
+Explicación completa del código: [MANUAL.md](MANUAL.md) · Historial de versiones: [CHANGELOG.md](CHANGELOG.md)
 
 ## Fotos de ejercicios
 Vienen de [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (dominio público, Unlicense),

@@ -1,7 +1,7 @@
 'use strict';
 
 // Versión de la app. Al publicar cambios hay que subirla aquí y en version.json
-const APP_VERSION = '2.4.0';
+const APP_VERSION = '0.5.0';
 
 // ---------- Utilidades ----------
 const KEY = 'gymlog_v1';
@@ -66,7 +66,7 @@ const ICONS = {
   image: '<rect x="3.5" y="4.5" width="17" height="15" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="M20.5 16l-5-5-8.5 8.5"/>',
   copy: '<rect x="8.5" y="8.5" width="12" height="12" rx="3"/><path d="M15.5 8.5V6a2.5 2.5 0 0 0-2.5-2.5H6A2.5 2.5 0 0 0 3.5 6v7A2.5 2.5 0 0 0 6 15.5h2.5"/>',
 };
-const ic = (name, size) => `<svg class="i" viewBox="0 0 24 24"${size ? ` style="width:${size}px;height:${size}px"` : ''}>${ICONS[name] || ''}</svg>`;
+const ic = (name, size) => `<svg class="i i-${name}" viewBox="0 0 24 24"${size ? ` style="width:${size}px;height:${size}px"` : ''}>${ICONS[name] || ''}</svg>`;
 
 // Anillo de progreso (widget "Esta semana")
 function ring(value, total, size = 64) {
@@ -130,7 +130,7 @@ function load() {
   d.settings = Object.assign({ rest: 90, sound: true, vibrate: true, notify: true, awake: true, weekGoal: 3 }, d.settings);
   return d;
 }
-// Versión 2.1: completa los ejercicios existentes (músculos, % peso corporal, MET, cardio)
+// Versión 0.3: completa los ejercicios existentes (músculos, % peso corporal, MET, cardio)
 // y añade los ejercicios nuevos de calistenia y cardio. No toca rutinas ni historial.
 function migrateV3(d) {
   const byName = Object.fromEntries(DEFAULT_EX_DATA.map(e => [e[0], exFromData(e)]));
@@ -171,7 +171,7 @@ function bodyWeightAt(d, ts) {
   const before = list.filter(e => e.date <= ts + DAY);
   return (before.length ? before[before.length - 1] : list[0]).weight;
 }
-// Versión 2.3: reconoce movimientos de calistenia en ejercicios del catálogo o propios,
+// Versión 0.3.1: reconoce movimientos de calistenia en ejercicios del catálogo o propios,
 // completa los músculos de las dominadas y recalcula los kg (y calorías) de entrenos pasados.
 function migrateV4(d) {
   const defs = Object.fromEntries(DEFAULT_EX_DATA.map(e => [e[0], exFromData(e)]));
@@ -333,14 +333,14 @@ const musColor = n => n <= 0 ? null : n < 5 ? '#3b82f6' : n < 9 ? '#c4b5fd' : '#
 const fser = n => (Math.round(n * 2) / 2).toLocaleString('es-ES');
 
 // Dibujo del cuerpo (frontal o trasero) coloreado según las series de cada músculo
-function bodySvg(side, tot, h = 260) {
+function bodySvg(side, tot, h = 260, pal = { off: 'var(--body-off)', head: 'var(--body-head)' }) {
   const zone = {};
   Object.entries(MUSCLES).forEach(([k, [, zones]]) => zones.forEach(z => { zone[z] = k; }));
   const H = side === 'front' ? 2000 : 2220;
   const polys = BODY[side].map(([z, pts]) => {
     const k = zone[z], c = k && musColor(tot[k].sets);
-    const fill = c || (k ? '#2c2c2e' : '#1c1c1e');
-    return pts.map(p => `<polygon points="${p}" fill="${fill}"${c ? ` style="filter:drop-shadow(0 0 18px ${c}88)"` : ''}/>`).join('');
+    const fill = c || (k ? pal.off : pal.head);
+    return pts.map(p => `<polygon points="${p}" style="fill:${fill}${c ? `;filter:drop-shadow(0 0 18px ${c}88)` : ''}"/>`).join('');
   }).join('');
   return `<svg class="bodymap" viewBox="-20 -20 1040 ${H + 40}" style="height:${h}px">${polys}</svg>`;
 }
@@ -459,7 +459,20 @@ function render() {
 }
 
 const header = (title, right = '', eyebrow = '') =>
-  `<header class="top"><div>${eyebrow ? `<p class="eyebrow">${eyebrow}</p>` : ''}<h1>${title}</h1></div>${right}</header>`;
+  `<header class="top"><div>${eyebrow ? `<p class="eyebrow">${eyebrow}</p>` : ''}<h1>${theme() === 'persona' ? ransom(title) : title}</h1></div>${right}</header>`;
+// Letras sueltas con estilos alternos (blanco, negro, rojo, girado), siempre igual para el mismo texto
+function ransom(t) {
+  return [...t].map((ch, k) => ch === ' ' ? '<i class="rn sp"></i>' : `<span class="rn r${(ch.charCodeAt(0) * 7 + k * 3) % 4}">${esc(ch)}</span>`).join('');
+}
+
+// ---------- Estilos ----------
+const THEMES = { dark: ['Oscuro', '#000000', 'linear-gradient(135deg,#1b1b1b,#000)'], light: ['Claro', '#f2f2f7', 'linear-gradient(135deg,#fff 50%,#ff3b30 50% 62%,#ffb300 62%)'],
+  persona: ['Persona', '#070707', 'linear-gradient(118deg,#000 45%,#e5141b 45% 62%,#fff 62% 66%,#000 66%)'] };
+const theme = () => THEMES[db.settings.theme] ? db.settings.theme : 'dark';
+function applyTheme() {
+  document.documentElement.dataset.theme = theme();
+  document.getElementById('themeColor').setAttribute('content', THEMES[theme()][1]);
+}
 
 // ---------- Instalar como app ----------
 let installEvt = null;  // evento de Chrome/Android para mostrar el diálogo de instalación
@@ -815,7 +828,7 @@ function barChart(vals, labels, colors, fmtV) {
   const max = Math.max(...vals, 0) || 1;
   return `<svg class="chart" viewBox="0 0 ${W} ${H}">${vals.map((v, k) => {
     const h = Math.max(v ? 3 : 0, v / max * (H - top - bottom)), x = P + k * bw + bw * 0.18, y = H - bottom - h;
-    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(bw * 0.64).toFixed(1)}" height="${h.toFixed(1)}" rx="4" fill="${colors[k] || 'var(--dim)'}"/>
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(bw * 0.64).toFixed(1)}" height="${h.toFixed(1)}" rx="4" style="fill:${colors[k] || 'var(--dim)'}"/>
       ${v ? `<text x="${(x + bw * 0.32).toFixed(1)}" y="${(y - 5).toFixed(1)}" class="cl" text-anchor="middle">${fmtV(v)}</text>` : ''}
       <text x="${(x + bw * 0.32).toFixed(1)}" y="${H - 5}" class="cl" text-anchor="middle">${labels[k]}</text>`;
   }).join('')}</svg>`;
@@ -835,8 +848,8 @@ function muscleCharts(list) {
       <select data-f="musSel">${Object.entries(MUSCLES).map(([k, [n]]) => `<option value="${k}"${k === sel ? ' selected' : ''}>${n}</option>`).join('')}</select>
       ${barChart(ser, lab, ser.map(musColor), fser)}
       <p class="muted small">Series por semana. Color según la escala del informe.</p></div>
-    <div class="card"><h3>Kg levantados por semana</h3>${barChart(per.map(p => p.kg), lab, per.map(() => '#f5f5f7'), k1)}
-      <h3 style="margin-top:16px">Calorías por semana</h3>${barChart(per.map(p => p.kcal), lab, per.map(() => '#8e8e93'), k1)}</div>`;
+    <div class="card"><h3>Kg levantados por semana</h3>${barChart(per.map(p => p.kg), lab, per.map(() => 'var(--tx)'), k1)}
+      <h3 style="margin-top:16px">Calorías por semana</h3>${barChart(per.map(p => p.kcal), lab, per.map(() => 'var(--mut)'), k1)}</div>`;
 }
 
 // ---------- Estimador de repeticiones / peso (fórmula de Epley sobre el peso total movido) ----------
@@ -985,7 +998,9 @@ function vSettings() {
   const perm = 'Notification' in window ? { granted: 'Permitidas', denied: 'Bloqueadas en el navegador', default: 'Sin decidir' }[Notification.permission] : 'No disponibles';
   const sw = (f, v, l) => `<label class="setrow"><span>${l}</span><input type="checkbox" class="switch" data-f="${f}" ${v ? 'checked' : ''}></label>`;
   return header('Ajustes') + updateBanner() + installCard() +
-    `<div class="card"><h3>Entrenamiento</h3>
+    `<div class="card"><h3>Estilo</h3><div class="themes">${Object.entries(THEMES).map(([k, [n, , prev]]) =>
+      `<button class="${theme() === k ? 'on' : ''}" data-a="setTheme" data-id="${k}"><i class="tsw" style="background:${prev}"></i><span>${n}</span></button>`).join('')}</div></div>
+    <div class="card"><h3>Entrenamiento</h3>
       <label class="setrow"><span>Descanso por defecto (s)</span><input inputmode="numeric" data-f="sRest" value="${s.rest}"></label>
       <label class="setrow"><span>Objetivo semanal (entrenos)</span><input inputmode="numeric" data-f="sGoal" value="${s.weekGoal}"></label>
       ${sw('sAwake', s.awake, 'Mantener la pantalla encendida')}
@@ -1218,7 +1233,7 @@ async function shareWorkout(h) {
   });
   // Mapa muscular del entreno
   const tot = addWorkoutMuscles(emptyMuscles(), h), bh = 560, top = P + 350;
-  const svgOf = side => bodySvg(side, tot, bh).replace('<svg class="bodymap"', `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(bh * 0.47)}" height="${bh}"`);
+  const svgOf = side => bodySvg(side, tot, bh, { off: '#2c2c2e', head: '#1c1c1e' }).replace('<svg class="bodymap"', `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(bh * 0.47)}" height="${bh}"`);
   try {
     const [fr, bk] = await Promise.all([svgImage(svgOf('front')), svgImage(svgOf('back'))]);
     g.drawImage(fr, W - P - 2 * bh * 0.47 - 10, top, bh * 0.47, bh);
@@ -1339,6 +1354,7 @@ const A = {
     catch (e) { prompt('Copia este enlace:', url); }
   },
   checkUpdate() { checkUpdate(true); },
+  setTheme(b, i, j, id) { db.settings.theme = id; save(); applyTheme(); render(); },
   applyUpdate,
 
   // Entreno
@@ -1678,6 +1694,7 @@ document.addEventListener('change', onField);
 document.addEventListener('pointerdown', () => { unlockAudio(); keepAwake(); }, { passive: true });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { keepAwake(); tick(); } });
 setInterval(tick, 500);
+applyTheme();
 render();
 keepAwake();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { });

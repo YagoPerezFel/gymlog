@@ -2,7 +2,7 @@
 
 Guía para entender cómo está hecha la app, qué hace cada archivo y cada función, y cómo modificarla o publicar cambios.
 
-**Versión descrita:** 2.4.0
+**Versión descrita:** 0.5.0 · Historial de cambios: [CHANGELOG.md](CHANGELOG.md)
 **App publicada:** https://yagoperezfel.github.io/gymlog/
 **Código:** https://github.com/YagoPerezFel/gymlog
 
@@ -27,8 +27,9 @@ Guía para entender cómo está hecha la app, qué hace cada archivo y cada func
 15. [Cambios habituales paso a paso](#15-cambios-habituales-paso-a-paso)
 16. [Problemas frecuentes](#16-problemas-frecuentes)
 17. [Glosario](#17-glosario)
-18. [Calorías, kg levantados y mapa muscular (v2.1)](#18-calorías-kg-levantados-y-mapa-muscular-v21)
-19. [Tipos de serie, RPE, progresión, gráficas y compartir (v2.4)](#19-tipos-de-serie-rpe-progresión-gráficas-y-compartir-v24)
+18. [Calorías, kg levantados y mapa muscular (v0.3)](#18-calorías-kg-levantados-y-mapa-muscular-v03)
+19. [Tipos de serie, RPE, progresión, gráficas y compartir (v0.4)](#19-tipos-de-serie-rpe-progresión-gráficas-y-compartir-v04)
+20. [Estilos: oscuro, claro y Persona (v0.5)](#20-estilos-oscuro-claro-y-persona-v05)
 
 ---
 
@@ -81,6 +82,7 @@ AppGym/
 ├── icon-192.png    Icono 192×192 (Android / iPhone)
 ├── icon-512.png    Icono 512×512 (pantalla de carga de Android)
 ├── README.md       Resumen corto del proyecto
+├── CHANGELOG.md    Historial de versiones con los cambios de cada una
 └── MANUAL.md       Este manual
 ```
 
@@ -100,7 +102,7 @@ Le dice al móvil cómo instalar la app: nombre (`GymLog`), iconos, color de fon
 ### `version.json`
 ```json
 {
-  "version": "2.0.0",
+  "version": "0.5.0",
   "files": ["./", "index.html", "app.js", ...]
 }
 ```
@@ -214,7 +216,7 @@ En los entrenos guardados se añaden `bodyKg` (tu peso ese día), `kcal` (calor�
 ### Puntos importantes
 - **Las actualizaciones de la app no tocan estos datos**, porque se guardan aparte del código.
 - **Si borras los datos del navegador** o desinstalas la app, se pierden. Para eso está **Ajustes → Exportar datos**, que descarga un `.json` con todo el objeto `db`.
-- **Compatibilidad hacia atrás:** la función `load()` completa los datos de versiones antiguas, y `migrateV3()` (v2.1) añade músculos, % de peso corporal y cardio a tus ejercicios, más los ejercicios nuevos de calistenia. Por ejemplo, añade `body: []` o `weekGoal: 3` si faltan, y pone la foto a los ejercicios de antes.
+- **Compatibilidad hacia atrás:** la función `load()` completa los datos de versiones antiguas, y `migrateV3()` (v0.3) añade músculos, % de peso corporal y cardio a tus ejercicios, más los ejercicios nuevos de calistenia. Por ejemplo, añade `body: []` o `weekGoal: 3` si faltan, y pone la foto a los ejercicios de antes.
 
 ---
 
@@ -483,8 +485,8 @@ Un **service worker** es un pequeño programa que el navegador ejecuta "por detr
 Como la app sale de la caché, los cambios que subas a GitHub **no llegan solos**. Para eso está el sistema de versiones:
 
 ```
-  app.js tiene:        APP_VERSION = '2.0.0'      ← la versión que tienes instalada
-  version.json tiene:  "version": "2.0.1"         ← la última publicada en GitHub
+  app.js tiene:        APP_VERSION = '0.5.0'      ← la versión que tienes instalada
+  version.json tiene:  "version": "0.5.1"         ← la última publicada en GitHub
 
   ¿Son distintas? ──► sí ──► hay actualización
 ```
@@ -576,22 +578,24 @@ Cada vez que cambies algo y quieras que llegue a tu móvil:
 
 1. **Haz los cambios** y pruébalos en local (sección 13).
 2. **Sube el número de versión en los dos sitios.** Tienen que coincidir:
-   - `app.js` → `const APP_VERSION = '2.0.1';`
-   - `version.json` → `"version": "2.0.1"`
+   - `app.js` → `const APP_VERSION = '0.5.1';`
+   - `version.json` → `"version": "0.5.1"`
 3. **Si añadiste un archivo nuevo** que la app necesita, añádelo a la lista `files` de `version.json` y a `FILES` en `sw.js`.
 4. **Sube a GitHub:**
    ```bash
    git add -A
-   git commit -m "v2.0.1: descripción del cambio"
+   git commit -m "v0.5.1: descripción del cambio"
    git push
    ```
 5. **Espera 1–2 minutos** a que GitHub Pages lo publique. Puedes comprobarlo abriendo `https://yagoperezfel.github.io/gymlog/version.json`.
 6. **En el móvil:** Ajustes → *Buscar nuevas actualizaciones*, o acepta el aviso que aparece al abrir la app.
 
 **Convención de versiones** (`mayor.menor.parche`):
-- `2.0.1`: arreglo pequeño.
-- `2.1.0`: función nueva.
-- `3.0.0`: cambio grande.
+- `0.5.1`: arreglo pequeño.
+- `0.6.0`: función nueva.
+- `1.0.0`: versión estable completa.
+
+**Apunta cada versión en [CHANGELOG.md](CHANGELOG.md)** (qué se añadió y qué se corrigió). En GitHub, cada versión tiene su etiqueta (`v0.5.0`...) y su página en *Releases*.
 
 > ⚠️ Si se te olvida subir la versión, la app del móvil no sabrá que hay cambios.
 
@@ -666,7 +670,7 @@ En `beep()`: `o.frequency.value` es el tono en Hz, la lista `[0, 0.3, 0.6]` son 
 
 ---
 
-## 18. Calorías, kg levantados y mapa muscular (v2.1)
+## 18. Calorías, kg levantados y mapa muscular (v0.3)
 
 ### 18.1 Kg levantados
 ```
@@ -677,7 +681,7 @@ kg del entreno  = suma de (kg de cada serie × repeticiones)
 - **Calistenia**: dominadas, fondos y pino 100 %; flexiones 64 %, declinadas 74 %, inclinadas 41 %, de rodillas 49 % (Ebben et al., 2011); pike push ups 75 % y elevadas 85 %; sentadilla y zancadas 88 % (todo el cuerpo menos piernas por debajo de la rodilla); remo invertido 60 % (estimado).
 - **Con lastre** (fondos/dominadas con lastre): la columna se llama **+kg** y se suma a tu peso.
 - Puedes cambiar el % de cualquier ejercicio: Rutinas → Ejercicios → el ejercicio → *Peso corporal*.
-- **Reconocimiento automático (v2.3)**: los ejercicios del catálogo o creados por ti se reconocen por el nombre, en español o inglés (*pull up*, *dominada*, *chin up*, *dips*, *fondos*, *push up*, *flexiones*, *muscle up*, *pike*, *handstand push up*, *inverted row*, *pistol*...). Así reciben su % de peso corporal, sus músculos y su familia para el estimador. Ejercicios con barra, máquina o polea, y las sentadillas, quedan fuera. Las reglas están en `MOVES` (`data.js`) y se aplican con `moveOf()` y `applyMove()`.
+- **Reconocimiento automático (v0.3.1)**: los ejercicios del catálogo o creados por ti se reconocen por el nombre, en español o inglés (*pull up*, *dominada*, *chin up*, *dips*, *fondos*, *push up*, *flexiones*, *muscle up*, *pike*, *handstand push up*, *inverted row*, *pistol*...). Así reciben su % de peso corporal, sus músculos y su familia para el estimador. Ejercicios con barra, máquina o polea, y las sentadillas, quedan fuera. Las reglas están en `MOVES` (`data.js`) y se aplican con `moveOf()` y `applyMove()`.
 - Si editas a mano los músculos o el % de un ejercicio (`musUser` / `bwUser`), la app no lo vuelve a cambiar.
 - `migrateV4()` recalculó los entrenos anteriores con tu peso de ese día (`bodyWeightAt()`).
 
@@ -718,7 +722,7 @@ Funciones: `profile()`, `rmrPerMin()`, `treadmillMET()`, `exMET()`, `setKcal()`,
 
 Funciones: `musOf()`, `weekMuscles()`, `musColor()`, `bodySvg()`, `vMuscles()`, `homeMuscles()`, `openMuscleEditor()`.
 
-### 18.4 Estimador de repeticiones (Progreso → Récords, v2.2)
+### 18.4 Estimador de repeticiones (Progreso → Récords, v0.3)
 Al abrir el récord de un ejercicio con peso o con peso corporal aparece una tabla de repeticiones estimadas y dos calculadoras: "con X kg → cuántas reps" y "para N reps → cuántos kg".
 
 ```
@@ -744,7 +748,7 @@ Funciones: `famOf()`, `strengthModel()`, `repsAt()`, `loadFor()`, `estimatorCard
 
 ---
 
-## 19. Tipos de serie, RPE, progresión, gráficas y compartir (v2.4)
+## 19. Tipos de serie, RPE, progresión, gráficas y compartir (v0.4)
 
 ### 19.1 Tipos de serie y RPE
 Al tocar el número de una serie se abre un menú (`setMenu`) con:
@@ -778,3 +782,44 @@ En Calendario, abre un entreno y pulsa **Compartir**. `shareWorkout()` dibuja un
 - el mapa muscular de ese entreno.
 
 Se puede **compartir** (WhatsApp, Instagram... mediante `navigator.share`, si el móvil lo permite) o **guardar** como PNG.
+
+---
+
+## 20. Estilos: oscuro, claro y Persona (v0.5)
+
+Se cambian en **Ajustes → Estilo** y se guardan en `db.settings.theme` (`dark`, `light` o `persona`).
+
+### Cómo funciona
+1. `applyTheme()` pone el atributo `data-theme` en la etiqueta `<html>` y actualiza el color de la barra del sistema (`<meta name="theme-color">`).
+2. Todos los colores están en **variables CSS** dentro de `:root` (el oscuro, que es el de por defecto). Cada estilo las redefine:
+   ```css
+   :root[data-theme=light]  { --bg:#f2f2f7; --ac:#ff3b30; ... }
+   :root[data-theme=persona]{ --bg:#070707; --ac:#e5141b; ... }
+   ```
+3. Lo que no se puede resolver solo con colores (formas, inclinaciones, sombras) va en reglas que empiezan por `[data-theme=persona] ...` o `[data-theme=light] ...`, al final del CSS de `index.html`.
+4. Cada icono tiene la clase `i-<nombre>` (por ejemplo `i-flame`, `i-trophy`), y así el estilo claro les da su color.
+
+### Variables principales
+| Variable | Para qué |
+|---|---|
+| `--bg`, `--card`, `--field`, `--line` | Fondo, tarjetas, campos y bordes |
+| `--tx`, `--mut`, `--dim` | Texto principal, secundario y apagado |
+| `--ac`, `--on-ac` | Color de acento y texto encima |
+| `--hl` | Acento en formato `R,G,B` para brillos con transparencia: `rgba(var(--hl),.3)` |
+| `--nav-bg`, `--nav-off`, `--nav-on` | Barra inferior |
+| `--sheet`, `--timer-bg`, `--toast-bg` | Hojas emergentes, temporizador y avisos |
+| `--body-off`, `--body-head` | Músculos sin trabajar en el mapa corporal |
+| `--thumb-filter` | Filtro de las fotos (blanco y negro en oscuro, color en claro) |
+| `--title-font` | Fuente de los títulos (Anton en Persona) |
+
+### Estilo Persona
+- Los títulos de cada pantalla se trocean en letras con `ransom()`. Cada letra recibe una de 4 clases (`.rn.r0`…`.r3`: blanco, negro, rojo o girada) calculada a partir de la letra y su posición, así que la misma palabra siempre sale igual.
+- La estrella de la pestaña activa y del botón ▶ es un `clip-path: polygon(...)`.
+- El fondo combina un degradado diagonal rojo con un patrón de puntos (`radial-gradient`).
+
+### Añadir un estilo nuevo
+1. Añádelo al objeto `THEMES` de `app.js`: `clave: [nombre, color de la barra del sistema, degradado de la muestra]`.
+2. Crea en `index.html` un bloque `:root[data-theme=clave]{ ... }` con las variables.
+3. Si quieres, añade reglas `[data-theme=clave] .card{...}` para formas propias.
+
+> La imagen de **Compartir entreno** siempre usa colores oscuros fijos, porque se dibuja en un `<canvas>` donde no existen las variables CSS.
