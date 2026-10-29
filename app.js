@@ -1,7 +1,7 @@
 'use strict';
 
 // Versión de la app. Al publicar cambios hay que subirla aquí y en version.json
-const APP_VERSION = '2.2.0';
+const APP_VERSION = '2.3.0';
 
 // ---------- Utilidades ----------
 const KEY = 'gymlog_v1';
@@ -118,11 +118,12 @@ function load() {
   try { d = JSON.parse(localStorage.getItem(KEY)); } catch (e) { }
   if (!d) d = {
     exercises: DEFAULT_EX_DATA.map(e => ({ id: uid(), ...exFromData(e) })),
-    routines: [], history: [], active: null, dataVer: 3,
+    routines: [], history: [], active: null, dataVer: 4,
   };
   d.body ||= [];
   // Datos de versiones anteriores: añade la foto a los ejercicios por defecto
   if ((d.dataVer || 0) < 3) migrateV3(d);
+  if (d.dataVer < 4) migrateV4(d);
   d.profile = Object.assign({ sex: '', birthYear: null, height: null }, d.profile);
   if (!d.profile.height) { const h = d.body.filter(e => e.height).sort((a, b) => b.date - a.date)[0]; if (h) d.profile.height = h.height; }
   d.settings = Object.assign({ rest: 90, sound: true, vibrate: true, notify: true, awake: true, weekGoal: 3 }, d.settings);
@@ -151,6 +152,48 @@ function migrateV3(d) {
   const have = new Set(d.exercises.map(e => norm(e.name)));
   DEFAULT_EX_DATA.forEach(e => { if (!have.has(norm(e[0]))) d.exercises.push({ id: uid(), ...exFromData(e) }); });
   d.dataVer = 3;
+}
+
+// Aplica una regla de movimiento a un ejercicio (sin pisar lo que hayas editado a mano)
+function applyMove(e, rule) {
+  if (!rule) return false;
+  e.fam = e.fam || rule.fam;
+  if (!e.bwUser && !e.bw) e.bw = rule.bw;
+  if (!e.musUser) e.mus = { p: rule.p.split(','), s: rule.s ? rule.s.split(',') : [] };
+  if (!e.met) e.met = MET.cali;
+  return true;
+}
+// Peso corporal registrado en una fecha (el último registro anterior; si no hay, el primero posterior)
+function bodyWeightAt(d, ts) {
+  const list = d.body.filter(e => e.weight).sort((a, b) => a.date - b.date);
+  if (!list.length) return 0;
+  const before = list.filter(e => e.date <= ts + DAY);
+  return (before.length ? before[before.length - 1] : list[0]).weight;
+}
+// Versión 2.3: reconoce movimientos de calistenia en ejercicios del catálogo o propios,
+// completa los músculos de las dominadas y recalcula los kg (y calorías) de entrenos pasados.
+function migrateV4(d) {
+  const defs = Object.fromEntries(DEFAULT_EX_DATA.map(e => [e[0], exFromData(e)]));
+  d.exercises.forEach(e => {
+    const def = defs[e.name];
+    if (def) { if (!e.musUser) e.mus = def.mus; if (!e.bwUser && def.bw) e.bw = def.bw; return; }
+    applyMove(e, moveOf(e.name));
+  });
+  const byId = Object.fromEntries(d.exercises.map(e => [e.id, e]));
+  d.history.forEach(h => h.exercises.forEach(x => {
+    const ex = byId[x.exId];
+    if (!ex || !ex.bw || x.bw || (x.kind !== 'w' && x.kind !== 'r')) return;
+    x.bw = ex.bw;
+    if (!h.bodyKg) h.bodyKg = bodyWeightAt(d, h.start);
+    // Las calorías dependen del MET: pasa de pesas (3,5) o peso corporal general (3,0) a calistenia (3,8)
+    if (x.kcal) {
+      const old = x.kind === 'w' ? MET.weights : MET.bodyweight, k = x.kcal * (ex.met || MET.cali) / old;
+      if (h.kcal != null) h.kcal = Math.round(h.kcal + k - x.kcal);
+      x.kcal = Math.round(k);
+    }
+  }));
+  if (d.active) d.active.exercises.forEach(x => { const ex = byId[x.exId]; if (ex && !x.bw) x.bw = ex.bw; });
+  d.dataVer = 4;
 }
 
 function save() {
@@ -706,7 +749,7 @@ function vMuscles() {
 }
 
 // ---------- Estimador de repeticiones / peso (fórmula de Epley sobre el peso total movido) ----------
-const famOf = ex => ex.fam || FAMILY[ex.name] || ex.id;
+const famOf = ex => ex.fam || FAMILY[ex.name] || ex.id;  // familia: mismo movimiento con o sin lastre
 // Mejor serie del movimiento (incluye variantes con y sin lastre) → 1RM estimado en kg totales
 function strengthModel(exId) {
   const ex = exById(exId);
@@ -1105,6 +1148,7 @@ const A = {
     // Cambia un músculo de un ejercicio: j = 0 nada, 1 secundario, 2 principal
     const e = exById(id), k = Object.keys(MUSCLES)[i], m = musOf(e);
     e.mus = { p: m.p.filter(x => x !== k), s: m.s.filter(x => x !== k) };
+    e.musUser = true;
     if (j === 2) e.mus.p.push(k); else if (j === 1) e.mus.s.push(k);
     save(); openMuscleEditor(e);
   },
@@ -1117,6 +1161,7 @@ const A = {
     const name = $('#pickQ').value.trim();
     const kind = confirm(`¿«${name}» usa peso (pesas, discos, máquina...)?`) ? 'w' : 'r';
     const e = { id: uid(), name, group: 'Otros', kind, img: '', mus: { p: [], s: [] }, bw: 0, met: 0, cardio: '' };
+    applyMove(e, moveOf(name));
     db.exercises.push(e); save();
     A.pick(null, 0, 0, e.id);
   },
@@ -1270,7 +1315,9 @@ const A = {
     const name = $('#nxName').value.trim();
     if (!name) return alert('Escribe un nombre.');
     if (db.exercises.some(e => norm(e.name) === norm(name))) return alert('Ese ejercicio ya existe.');
-    db.exercises.push({ id: uid(), name, group: $('#nxGroup').value.trim() || 'Otros', kind: $('#nxKind').value, img: '', mus: { p: [], s: [] }, bw: 0, met: 0, cardio: '' });
+    const e = { id: uid(), name, group: $('#nxGroup').value.trim() || 'Otros', kind: $('#nxKind').value, img: '', mus: { p: [], s: [] }, bw: 0, met: 0, cardio: '' };
+    applyMove(e, moveOf(name));
+    db.exercises.push(e);
     save(); render();
   },
   exEdit(b, i, j, id) {
@@ -1283,7 +1330,7 @@ const A = {
       ['Músculos trabajados', () => openMuscleEditor(e)],
       [`Peso corporal: ${Math.round((e.bw || 0) * 100)}%`, () => {
         const v = prompt('¿Qué % de tu peso corporal mueves en este ejercicio? (dominadas 100, flexiones 64, 0 si no aplica)', Math.round((e.bw || 0) * 100));
-        if (v !== null && !isNaN(parseFloat(v))) { e.bw = Math.max(0, Math.min(100, parseFloat(v))) / 100; save(); render(); }
+        if (v !== null && !isNaN(parseFloat(v))) { e.bw = Math.max(0, Math.min(100, parseFloat(v))) / 100; e.bwUser = true; save(); render(); }
       }],
       ['Eliminar', () => {
         if (db.active && db.active.exercises.some(x => x.exId === id)) return alert('Está en el entreno en curso; quítalo de ahí primero.');
@@ -1312,7 +1359,12 @@ const A = {
     if (!name || !name.trim()) return;
     let e = db.exercises.find(e => norm(e.name) === norm(name.trim()));
     if (e) { if (!e.img) e.img = id; }
-    else { e = { id: uid(), name: name.trim(), group: c[2], kind: c[4], img: id, mus: { p: c[5] ? c[5].split(',') : [], s: c[6] ? c[6].split(',') : [] }, bw: 0, met: 0, cardio: '' }; db.exercises.push(e); }
+    else {
+      e = { id: uid(), name: name.trim(), group: c[2], kind: c[4], img: id, mus: { p: c[5] ? c[5].split(',') : [], s: c[6] ? c[6].split(',') : [] }, bw: 0, met: 0, cardio: '' };
+      // se reconoce por el nombre en inglés del catálogo o por el que le pongas
+      applyMove(e, moveOf(c[1]) || moveOf(e.name));
+      db.exercises.push(e);
+    }
     save(); closeModal();
     if (mode.cb) mode.cb(e.id);
     else { render(); toast('Añadido: ' + e.name); }

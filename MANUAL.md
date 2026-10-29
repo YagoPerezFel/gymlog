@@ -2,7 +2,7 @@
 
 Guía para entender cómo está hecha la app, qué hace cada archivo y cada función, y cómo modificarla o publicar cambios.
 
-**Versión descrita:** 2.2.0
+**Versión descrita:** 2.3.0
 **App publicada:** https://yagoperezfel.github.io/gymlog/
 **Código:** https://github.com/YagoPerezFel/gymlog
 
@@ -676,6 +676,9 @@ kg del entreno  = suma de (kg de cada serie × repeticiones)
 - **Calistenia**: dominadas, fondos y pino 100 %; flexiones 64 %, declinadas 74 %, inclinadas 41 %, de rodillas 49 % (Ebben et al., 2011); pike push ups 75 % y elevadas 85 %; sentadilla y zancadas 88 % (todo el cuerpo menos piernas por debajo de la rodilla); remo invertido 60 % (estimado).
 - **Con lastre** (fondos/dominadas con lastre): la columna se llama **+kg** y se suma a tu peso.
 - Puedes cambiar el % de cualquier ejercicio: Rutinas → Ejercicios → el ejercicio → *Peso corporal*.
+- **Reconocimiento automático (v2.3)**: los ejercicios del catálogo o creados por ti se reconocen por el nombre, en español o inglés (*pull up*, *dominada*, *chin up*, *dips*, *fondos*, *push up*, *flexiones*, *muscle up*, *pike*, *handstand push up*, *inverted row*, *pistol*...). Así reciben su % de peso corporal, sus músculos y su familia para el estimador. Ejercicios con barra, máquina o polea, y las sentadillas, quedan fuera. Las reglas están en `MOVES` (`data.js`) y se aplican con `moveOf()` y `applyMove()`.
+- Si editas a mano los músculos o el % de un ejercicio (`musUser` / `bwUser`), la app no lo vuelve a cambiar.
+- `migrateV4()` recalculó los entrenos anteriores con tu peso de ese día (`bodyWeightAt()`).
 
 Funciones: `setLoad()`, `workoutVolume()`, `activeTotals()`.
 
@@ -688,6 +691,7 @@ duración           = 3 s por repetición (mínimo 10 s) + el descanso que la si
 metabolismo basal  = Harris-Benedict con sexo, edad, altura y peso (kcal/día ÷ 1440)
 ```
 - **MET** (Compendio de Actividades Físicas 2024): pesas 3,5; sentadilla/peso muerto 5,0; calistenia 3,8; pliometría y burpees 7,5; core y estáticos 2,8. Están en el objeto `MET` de `data.js`.
+- **Las calorías no dependen de los kg levantados**: el método del Compendio usa el tipo de ejercicio (MET), el tiempo y tu metabolismo (peso, altura, edad y sexo). Levantar más peso se nota en el récord y en los kg, pero no cambia la estimación de calorías.
 - El descanso se incluye porque los MET del Compendio para entrenamiento de fuerza corresponden a sesiones con descansos.
 - Sin sexo/edad/altura se usa el valor estándar (1 MET = 3,5 ml O₂/kg/min). Sin peso no se calculan.
 

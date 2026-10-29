@@ -65,7 +65,7 @@ const DEFAULT_EX_DATA = [
   ['Cruce de poleas', 'Pecho', 'w', 'Cable_Crossover', 'chest', 'shoulders'],
   ['Fondos', 'Pecho', 'r', 'Dips_-_Chest_Version', 'chest,triceps', 'shoulders', 1, MET.cali],
   ['Flexiones', 'Pecho', 'r', 'Pushups', 'chest', 'triceps,shoulders', 0.64, MET.cali],
-  ['Dominadas', 'Espalda', 'r', 'Pullups', 'back', 'biceps,forearms', 1, MET.cali],
+  ['Dominadas', 'Espalda', 'r', 'Pullups', 'back', 'biceps,forearms,shoulders,traps', 1, MET.cali],
   ['Jalón al pecho', 'Espalda', 'w', 'Wide-Grip_Lat_Pulldown', 'back', 'biceps'],
   ['Remo con barra', 'Espalda', 'w', 'Bent_Over_Barbell_Row', 'back', 'biceps,traps,lowback'],
   ['Remo con mancuerna', 'Espalda', 'w', 'One-Arm_Dumbbell_Row', 'back', 'biceps'],
@@ -121,14 +121,14 @@ const DEFAULT_EX_DATA = [
   ['Pike push ups elevadas', 'Calistenia', 'r', '', 'shoulders', 'triceps,traps', 0.85, MET.cali],
   ['Flexiones en pino (HSPU)', 'Calistenia', 'r', 'Handstand_Push-Ups', 'shoulders,triceps', 'traps', 1, MET.cali],
   // Calistenia — tirón
-  ['Dominadas con lastre', 'Calistenia', 'w', 'Pullups', 'back', 'biceps,forearms', 1, MET.cali],
-  ['Dominadas supinas (chin ups)', 'Calistenia', 'r', 'Chin-Up', 'back,biceps', 'forearms', 1, MET.cali],
-  ['Dominadas agarre ancho', 'Calistenia', 'r', 'Wide-Grip_Rear_Pull-Up', 'back', 'biceps,shoulders', 1, MET.cali],
-  ['Dominadas arqueras', 'Calistenia', 'r', 'Pullups', 'back', 'biceps', 1, MET.cali],
-  ['Dominadas negativas', 'Calistenia', 'r', 'Pullups', 'back', 'biceps', 1, MET.cali],
-  ['Dominadas asistidas con banda', 'Calistenia', 'r', 'Band_Assisted_Pull-Up', 'back', 'biceps', 0.7, MET.cali],
-  ['Muscle up', 'Calistenia', 'r', 'Muscle_Up', 'back,triceps', 'biceps,chest,shoulders', 1, MET.cali],
-  ['Remo invertido (australianas)', 'Calistenia', 'r', 'Inverted_Row', 'back', 'biceps,shoulders', 0.6, MET.cali],
+  ['Dominadas con lastre', 'Calistenia', 'w', 'Pullups', 'back', 'biceps,forearms,shoulders,traps', 1, MET.cali],
+  ['Dominadas supinas (chin ups)', 'Calistenia', 'r', 'Chin-Up', 'back,biceps', 'forearms,shoulders,traps', 1, MET.cali],
+  ['Dominadas agarre ancho', 'Calistenia', 'r', 'Wide-Grip_Rear_Pull-Up', 'back', 'biceps,forearms,shoulders,traps', 1, MET.cali],
+  ['Dominadas arqueras', 'Calistenia', 'r', 'Pullups', 'back', 'biceps,forearms,shoulders,traps', 1, MET.cali],
+  ['Dominadas negativas', 'Calistenia', 'r', 'Pullups', 'back', 'biceps,forearms,shoulders,traps', 1, MET.cali],
+  ['Dominadas asistidas con banda', 'Calistenia', 'r', 'Band_Assisted_Pull-Up', 'back', 'biceps,forearms,shoulders,traps', 0.7, MET.cali],
+  ['Muscle up', 'Calistenia', 'r', 'Muscle_Up', 'back,triceps', 'biceps,chest,shoulders,forearms,abs', 1, MET.cali],
+  ['Remo invertido (australianas)', 'Calistenia', 'r', 'Inverted_Row', 'back', 'biceps,shoulders,traps', 0.6, MET.cali],
   // Calistenia — pierna
   ['Sentadilla con peso corporal', 'Calistenia', 'r', 'Bodyweight_Squat', 'quads,glutes', 'hams', 0.88, MET.cali],
   ['Sentadilla pistol', 'Calistenia', 'r', 'Kettlebell_Pistol_Squat', 'quads,glutes', 'hams,abs', 0.88, MET.cali],
@@ -154,6 +154,32 @@ const FAMILY = {
   'Fondos': 'dip', 'Fondos con lastre': 'dip',
   'Flexiones': 'pushup', 'Flexiones con lastre': 'pushup',
 };
+
+// Reconocimiento de movimientos de calistenia por el nombre (español o inglés), para ejercicios
+// del catálogo o creados por ti: % de peso corporal, músculos y familia (para el estimador).
+// El orden importa: gana la primera regla que encaje. Máquinas, poleas y barras no entran.
+const MOVES = [
+  [/machine|m[aá]quina|pulldown|jal[oó]n|cable|polea|barbell|smith|leverage|squat|sentadilla|crunch|stretch|estiramiento|throw|hip flexion/i, null],
+  [/band.?assisted|asistid/i, { fam: 'pullup', bw: 0.7, p: 'back', s: 'biceps,forearms,shoulders,traps' }],
+  [/muscle.?up/i, { fam: 'muscleup', bw: 1, p: 'back,triceps', s: 'biceps,chest,shoulders,forearms,abs' }],
+  [/chin.?ups?\b|\bchins?\b|dominadas? supinas?/i, { fam: 'chinup', bw: 1, p: 'back,biceps', s: 'forearms,shoulders,traps' }],
+  [/pull.?ups?\b|\bpullups?\b|dominad/i, { fam: 'pullup', bw: 1, p: 'back', s: 'biceps,forearms,shoulders,traps' }],
+  [/bench.?dips?\b|fondos? en banco/i, { fam: 'benchdip', bw: 0.6, p: 'triceps', s: 'chest,shoulders' }],
+  [/\bdips?\b|\bfondos?\b/i, { fam: 'dip', bw: 1, p: 'chest,triceps', s: 'shoulders' }],
+  [/handstand.?push|\bhspu\b|flexi[oó]n(es)? en pino/i, { fam: 'hspu', bw: 1, p: 'shoulders,triceps', s: 'traps' }],
+  [/pike.?push|pike.?ups?\b|flexi[oó]n(es)? pike/i, { fam: 'pike', bw: 0.75, p: 'shoulders', s: 'triceps,traps' }],
+  [/inverted.?row|australian|remo invertido/i, { fam: 'invrow', bw: 0.6, p: 'back', s: 'biceps,shoulders,traps' }],
+  [/(knee|rodilla).*(push|flexi)|(push.?ups?|flexiones|flexión).*(knee|rodilla)/i, { fam: 'pushup', bw: 0.49, p: 'chest', s: 'triceps,shoulders' }],
+  [/incline.?push|flexiones inclinad/i, { fam: 'pushup', bw: 0.41, p: 'chest', s: 'triceps,shoulders' }],
+  [/decline.?push|feet.?elevated|flexiones declinad/i, { fam: 'pushup', bw: 0.74, p: 'chest,shoulders', s: 'triceps' }],
+  [/push.?ups?\b|\bpushups?\b|\bflexiones\b|\bflexión\b/i, { fam: 'pushup', bw: 0.64, p: 'chest', s: 'triceps,shoulders,abs' }],
+  [/\bpistol\b/i, { fam: 'pistol', bw: 0.88, p: 'quads,glutes', s: 'hams,abs' }],
+];
+// Devuelve la regla que corresponde al nombre, o null
+function moveOf(name) {
+  for (const [re, rule] of MOVES) if (re.test(name)) return rule;
+  return null;
+}
 
 const exFromData = ([name, group, kind, img, p, s, bw, met, cardio]) => ({
   name, group, kind, img: img || '',

@@ -1,4 +1,4 @@
 {
-  "version": "2.2.0",
+  "version": "2.3.0",
   "files": ["./", "index.html", "data.js", "app.js", "manifest.json", "icon.svg", "icon-192.png", "icon-512.png", "catalog.json"]
 }
