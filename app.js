@@ -187,11 +187,32 @@ function routineCard(r, editable) {
   </div>`;
 }
 
+// ---------- Instalar como app ----------
+let installEvt = null;  // evento de Chrome/Android para mostrar el diálogo de instalación
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+// Navegadores internos de otras apps (Instagram, WhatsApp, Claude...) que no permiten instalar
+const inAppBrowser = /FBAN|FBAV|Instagram|Line\/|; wv\)|WhatsApp|Claude/i.test(navigator.userAgent);
+
+function installCard() {
+  if (isStandalone()) return '';
+  let how;
+  if (installEvt) how = '<button class="btn primary block" data-a="install">📲 Instalar app</button>';
+  else if (inAppBrowser) how = `<p class="small">Ahora mismo estás en el navegador interno de otra app, y desde ahí no se puede instalar.
+      Toca <b>⋮</b> o <b>···</b> y elige <b>"Abrir en ${isIOS ? 'Safari' : 'Chrome'}"</b>, o copia el enlace y pégalo en ${isIOS ? 'Safari' : 'Chrome'}.</p>
+      <button class="btn block" data-a="copyLink">Copiar enlace</button>`;
+  else if (isIOS) how = '<p class="small">En <b>Safari</b>: toca <b>Compartir</b> (□↑) y elige <b>"Añadir a pantalla de inicio"</b>. Después abre GymLog desde el icono.</p>';
+  else how = '<p class="small">En <b>Chrome</b>: toca el menú <b>⋮</b> y elige <b>"Instalar aplicación"</b> o <b>"Añadir a pantalla de inicio"</b>.</p>';
+  return `<div class="card"><b>📲 Instala GymLog como una app</b><p class="muted small">Tendrás su icono junto a tus otras apps y se abrirá a pantalla completa, sin barra del navegador.</p>${how}</div>`;
+}
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (!db.active) render(); });
+window.addEventListener('appinstalled', () => { installEvt = null; if (!db.active) render(); });
+
 function vTrain() {
   if (db.active) return vWorkout();
   const tip = ('Notification' in window && Notification.permission === 'default')
     ? `<div class="card"><b>🔔 Avisos de descanso</b><p class="muted small">Permite las notificaciones para que te avise al acabar cada descanso aunque no estés mirando la app.</p><button class="btn block" data-a="askNotif">Activar notificaciones</button></div>` : '';
-  return `<h1>Entrenar</h1>${tip}
+  return `<h1>Entrenar</h1>${installCard()}${tip}
     <button class="btn primary big block" data-a="startEmpty">+ Entrenamiento libre</button>
     <h2>Mis rutinas</h2>
     ${db.routines.map(r => routineCard(r, false)).join('') || '<p class="muted">Aún no tienes rutinas. Créalas en la pestaña Rutinas o guarda un entrenamiento libre como rutina.</p>'}`;
@@ -374,7 +395,7 @@ function vSettings() {
   const s = db.settings;
   const perm = 'Notification' in window ? { granted: 'permitidas ✅', denied: 'bloqueadas ❌ (actívalas en los ajustes del navegador)', default: 'sin decidir' }[Notification.permission] : 'no soportadas en este navegador';
   const chk = (f, v, l) => `<label class="sw"><input type="checkbox" data-f="${f}" ${v ? 'checked' : ''}>${l}</label>`;
-  return `<h1>Ajustes</h1>
+  return `<h1>Ajustes</h1>${installCard()}
     <div class="card"><h3>Descansos</h3>
       <label class="field">Descanso por defecto (segundos)<input inputmode="numeric" data-f="sRest" value="${s.rest}"></label>
       ${chk('sSound', s.sound, 'Sonido al terminar el descanso')}
@@ -574,6 +595,17 @@ const A = {
     A.pick(null, 0, 0, e.id);
   },
   async askNotif() { if (await askNotifPermission()) db.settings.notify = true; save(); render(); },
+  async install() {
+    if (!installEvt) return;
+    installEvt.prompt();
+    await installEvt.userChoice;
+    installEvt = null; render();
+  },
+  async copyLink() {
+    const url = location.origin + location.pathname;
+    try { await navigator.clipboard.writeText(url); toast('Enlace copiado ✅'); }
+    catch (e) { prompt('Copia este enlace:', url); }
+  },
 
   // Entreno
   startEmpty() { startWorkout('Entrenamiento libre', []); },

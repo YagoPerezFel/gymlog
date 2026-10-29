@@ -1,5 +1,5 @@
 // Service worker: guarda la app para usarla sin conexión y gestiona los clics en notificaciones
-const CACHE = 'gymlog-v2';
+const CACHE = 'gymlog-v3';
 const IMG_CACHE = 'gymlog-img';
 const FILES = ['./', './index.html', './app.js', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png', './catalog.json'];
 
