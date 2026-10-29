@@ -2,7 +2,7 @@
 
 Guía para entender cómo está hecha la app, qué hace cada archivo y cada función, y cómo modificarla o publicar cambios.
 
-**Versión descrita:** 2.0.0
+**Versión descrita:** 2.2.0
 **App publicada:** https://yagoperezfel.github.io/gymlog/
 **Código:** https://github.com/YagoPerezFel/gymlog
 
@@ -27,6 +27,7 @@ Guía para entender cómo está hecha la app, qué hace cada archivo y cada func
 15. [Cambios habituales paso a paso](#15-cambios-habituales-paso-a-paso)
 16. [Problemas frecuentes](#16-problemas-frecuentes)
 17. [Glosario](#17-glosario)
+18. [Calorías, kg levantados y mapa muscular (v2.1)](#18-calorías-kg-levantados-y-mapa-muscular-v21)
 
 ---
 
@@ -69,7 +70,8 @@ Es **JavaScript "puro"** (en inglés *vanilla JS*): no usa frameworks como React
 ```
 AppGym/
 ├── index.html      Página principal: estructura HTML + todo el CSS (diseño)
-├── app.js          Toda la lógica de la app (≈1100 líneas)
+├── data.js         Datos fijos: músculos, ejercicios por defecto, valores MET, cardio y dibujo del cuerpo
+├── app.js          Toda la lógica de la app (≈1400 líneas)
 ├── sw.js           Service worker: funcionamiento sin conexión, caché y notificaciones
 ├── manifest.json   Datos para instalar la app (nombre, icono, colores)
 ├── version.json    Versión publicada + lista de archivos (lo usa el botón de actualizar)
@@ -155,8 +157,12 @@ db = {
 
 **Ejercicio** (`db.exercises[]`)
 ```js
-{ id: "lq3x9ab12", name: "Press banca", group: "Pecho", kind: "w", img: "Barbell_Bench_Press_-_Medium_Grip" }
-// kind: "w" = peso × reps, "r" = solo reps, "t" = tiempo en segundos
+{ id: "lq3x9ab12", name: "Press banca", group: "Pecho", kind: "w", img: "Barbell_Bench_Press_-_Medium_Grip",
+  mus: { p: ["chest"], s: ["triceps", "shoulders"] },  // músculos principales y secundarios
+  bw: 0,          // % de peso corporal que se mueve (0,64 = 64 %); en "w" el peso escrito es lastre
+  met: 0,         // MET propio (0 = automático según el tipo)
+  cardio: "" }    // treadmill, bike, row, ellip, rope, stair... (solo ejercicios de cardio)
+// kind: "w" = peso × reps, "r" = solo reps, "t" = tiempo en segundos, "c" = cardio en minutos
 // img: id de la foto en el catálogo ("" si no tiene)
 ```
 
@@ -191,6 +197,14 @@ db = {
 ```
 Aquí los valores `w` y `r` son **texto**, tal cual los escribes. Se convierten a números al terminar el entreno.
 
+**Perfil** (`db.profile`) — se usa para calorías y kg con peso corporal
+```js
+{ sex: "m", birthYear: 1996, height: 180 }   // sex: "m" hombre, "f" mujer. La edad se calcula con el año.
+```
+El peso sale del último registro de medidas corporales.
+
+En los entrenos guardados se añaden `bodyKg` (tu peso ese día), `kcal` (calorías estimadas) y, en cada ejercicio, `bw`, `cardio` y `kcal`. Las series de cardio guardan `{ r: minutos, v: km/h, g: % inclinación }` (cinta) o `{ r: minutos, l: nivel de intensidad }`.
+
 **Ajustes** (`db.settings`)
 ```js
 { rest: 90, sound: true, vibrate: true, notify: true, awake: true, weekGoal: 3 }
@@ -199,7 +213,7 @@ Aquí los valores `w` y `r` son **texto**, tal cual los escribes. Se convierten 
 ### Puntos importantes
 - **Las actualizaciones de la app no tocan estos datos**, porque se guardan aparte del código.
 - **Si borras los datos del navegador** o desinstalas la app, se pierden. Para eso está **Ajustes → Exportar datos**, que descarga un `.json` con todo el objeto `db`.
-- **Compatibilidad hacia atrás:** la función `load()` completa los datos de versiones antiguas. Por ejemplo, añade `body: []` o `weekGoal: 3` si faltan, y pone la foto a los ejercicios de antes.
+- **Compatibilidad hacia atrás:** la función `load()` completa los datos de versiones antiguas, y `migrateV3()` (v2.1) añade músculos, % de peso corporal y cardio a tus ejercicios, más los ejercicios nuevos de calistenia. Por ejemplo, añade `body: []` o `weekGoal: 3` si faltan, y pone la foto a los ejercicios de antes.
 
 ---
 
@@ -648,3 +662,77 @@ En `beep()`: `o.frequency.value` es el tono en Hz, la lista `[0, 0.3, 0.6]` son 
 | **1RM** | Peso máximo que podrías levantar a 1 repetición (aquí, estimado con la fórmula de Epley) |
 | **Volumen** | Suma de peso × repeticiones |
 | **Commit / push** | Guardar una versión del código en git / subirla a GitHub |
+
+---
+
+## 18. Calorías, kg levantados y mapa muscular (v2.1)
+
+### 18.1 Kg levantados
+```
+kg de una serie = (% peso corporal × tu peso) + peso escrito (barra o lastre)
+kg del entreno  = suma de (kg de cada serie × repeticiones)
+```
+- **Pesas** (press banca, sentadilla...): % peso corporal = 0, cuenta solo el peso de la barra.
+- **Calistenia**: dominadas, fondos y pino 100 %; flexiones 64 %, declinadas 74 %, inclinadas 41 %, de rodillas 49 % (Ebben et al., 2011); pike push ups 75 % y elevadas 85 %; sentadilla y zancadas 88 % (todo el cuerpo menos piernas por debajo de la rodilla); remo invertido 60 % (estimado).
+- **Con lastre** (fondos/dominadas con lastre): la columna se llama **+kg** y se suma a tu peso.
+- Puedes cambiar el % de cualquier ejercicio: Rutinas → Ejercicios → el ejercicio → *Peso corporal*.
+
+Funciones: `setLoad()`, `workoutVolume()`, `activeTotals()`.
+
+### 18.2 Calorías
+Se calculan serie a serie y se van sumando mientras entrenas:
+
+```
+kcal de una serie = MET del ejercicio × metabolismo basal por minuto × duración (min)
+duración           = 3 s por repetición (mínimo 10 s) + el descanso que la sigue (máx. 5 min)
+metabolismo basal  = Harris-Benedict con sexo, edad, altura y peso (kcal/día ÷ 1440)
+```
+- **MET** (Compendio de Actividades Físicas 2024): pesas 3,5; sentadilla/peso muerto 5,0; calistenia 3,8; pliometría y burpees 7,5; core y estáticos 2,8. Están en el objeto `MET` de `data.js`.
+- El descanso se incluye porque los MET del Compendio para entrenamiento de fuerza corresponden a sesiones con descansos.
+- Sin sexo/edad/altura se usa el valor estándar (1 MET = 3,5 ml O₂/kg/min). Sin peso no se calculan.
+
+**Cinta** — ecuaciones del ACSM con velocidad (km/h) e inclinación (%) por tramo:
+```
+caminar (< 7 km/h):  VO2 = 0,1·v + 1,8·v·incl + 3,5     (v en m/min, incl en decimal)
+correr  (≥ 7 km/h):  VO2 = 0,2·v + 0,9·v·incl + 3,5
+MET = VO2 / 3,5   →   kcal = MET × metabolismo basal por minuto × minutos
+```
+**Resto de cardio** — por minutos e intensidad, con los MET del Compendio (objeto `CARDIO` en `data.js`): bicicleta 5,0/6,8/10,3; remo 5,0/7,5/11,0; elíptica 5,0/9,0; comba 8,3/11,8/12,3; escaladora 9,3.
+
+Funciones: `profile()`, `rmrPerMin()`, `treadmillMET()`, `exMET()`, `setKcal()`, `activeTotals()`, `histKcal()`.
+
+> Son **estimaciones**: el gasto real varía según la técnica, el ritmo y la persona (±10-20 %).
+
+### 18.3 Mapa e informe muscular
+- Cada ejercicio tiene músculos **principales** y **secundarios** (`mus`). Por cada serie hecha, el principal suma **1 serie** y cada secundario **½**. Las repeticiones se reparten igual.
+- Se cuenta la semana de lunes a domingo, incluido el entreno en curso.
+- Colores: **azul** 1-4 series, **violeta claro** 5-8, **morado** 9 o más (`musColor()`).
+- 16 grupos musculares (objeto `MUSCLES` en `data.js`), cada uno asociado a zonas del dibujo.
+- El dibujo (`BODY` en `data.js`) son polígonos SVG de *react-body-highlighter* (licencia MIT); `bodySvg()` los pinta.
+- Los ejercicios del catálogo traen sus músculos de *free-exercise-db*. Para cambiar los de cualquier ejercicio: Rutinas → Ejercicios → el ejercicio → *Músculos trabajados*.
+
+Funciones: `musOf()`, `weekMuscles()`, `musColor()`, `bodySvg()`, `vMuscles()`, `homeMuscles()`, `openMuscleEditor()`.
+
+### 18.4 Estimador de repeticiones (Progreso → Récords, v2.2)
+Al abrir el récord de un ejercicio con peso o con peso corporal aparece una tabla de repeticiones estimadas y dos calculadoras: "con X kg → cuántas reps" y "para N reps → cuántos kg".
+
+```
+1RM (kg totales) = peso total × (1 + reps / 30)            ← fórmula de Epley, con tu mejor serie
+reps con un peso = 30 × (1RM / peso total − 1)
+peso para N reps = 1RM / (1 + N / 30)
+peso total       = % peso corporal × tu peso actual + lastre   (en pesas: el peso de la barra)
+```
+Ejemplo: pesas 80 kg y haces 5 dominadas con +40 kg → 1RM = 120 × (1 + 5/30) = 140 kg → sin lastre: 30 × (140/80 − 1) ≈ 22 dominadas.
+
+- Las variantes del mismo movimiento comparten datos (objeto `FAMILY` en `data.js`): *Dominadas* ↔ *Dominadas con lastre*, *Fondos* ↔ *Fondos con lastre*, *Flexiones* ↔ *Flexiones con lastre*.
+- Es más fiable entre 1 y 12 repeticiones; con más de 15 es orientativo.
+
+Funciones: `famOf()`, `strengthModel()`, `repsAt()`, `loadFor()`, `estimatorCard()`.
+
+### 18.5 Fuentes
+- [2024 Adult Compendium of Physical Activities](https://pacompendium.com/adult-compendium/) — valores MET.
+- [Compendium: Corrected METs](https://pacompendium.com/corrected-mets/) — uso de Harris-Benedict.
+- Ecuaciones metabólicas del ACSM (*ACSM's Guidelines for Exercise Testing and Prescription*).
+- Ebben et al. (2011), *Kinetic analysis of several variations of push-ups* — % de peso en flexiones.
+- [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (Unlicense) — fotos y músculos del catálogo.
+- [react-body-highlighter](https://github.com/giavinh79/react-body-highlighter) (MIT) — dibujo del cuerpo.
