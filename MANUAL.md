@@ -2,7 +2,7 @@
 
 Guía para entender cómo está hecha la app, qué hace cada archivo y cada función, y cómo modificarla o publicar cambios.
 
-**Versión descrita:** 2.3.0
+**Versión descrita:** 2.4.0
 **App publicada:** https://yagoperezfel.github.io/gymlog/
 **Código:** https://github.com/YagoPerezFel/gymlog
 
@@ -28,6 +28,7 @@ Guía para entender cómo está hecha la app, qué hace cada archivo y cada func
 16. [Problemas frecuentes](#16-problemas-frecuentes)
 17. [Glosario](#17-glosario)
 18. [Calorías, kg levantados y mapa muscular (v2.1)](#18-calorías-kg-levantados-y-mapa-muscular-v21)
+19. [Tipos de serie, RPE, progresión, gráficas y compartir (v2.4)](#19-tipos-de-serie-rpe-progresión-gráficas-y-compartir-v24)
 
 ---
 
@@ -740,3 +741,40 @@ Funciones: `famOf()`, `strengthModel()`, `repsAt()`, `loadFor()`, `estimatorCard
 - Ebben et al. (2011), *Kinetic analysis of several variations of push-ups* — % de peso en flexiones.
 - [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (Unlicense) — fotos y músculos del catálogo.
 - [react-body-highlighter](https://github.com/giavinh79/react-body-highlighter) (MIT) — dibujo del cuerpo.
+
+---
+
+## 19. Tipos de serie, RPE, progresión, gráficas y compartir (v2.4)
+
+### 19.1 Tipos de serie y RPE
+Al tocar el número de una serie se abre un menú (`setMenu`) con:
+- **Tipo** (`s.t`): Normal, **Calentamiento** (`w`, se ve como "C"), **Al fallo** (`f`, "F") o **Drop set** (`d`, "D"). Objeto `SET_TYPES`.
+- **RPE** (`s.rpe`): esfuerzo percibido de 6 a 10 (10 = al fallo, 8 = te quedaban 2 repeticiones). Se ve como "@8" bajo el número.
+- **Eliminar serie**.
+
+Las series de calentamiento **no cuentan** en kg levantados, récords, informe muscular ni estimador, pero **sí** en calorías. La función `isWork(s)` distingue una serie de trabajo de un calentamiento.
+
+### 19.2 Sugerencia de progresión
+Encima de las series de cada ejercicio aparece una sugerencia con el botón **Aplicar**, que rellena las series pendientes (`suggestion()`, `suggestionBox()`, `sugApply`). Usa la **doble progresión**: primero subes repeticiones dentro de un rango y, al llegar al tope en todas las series, subes peso.
+
+- **Rango**: el objetivo de la rutina ("8-12" o "8"). Si no hay, 8-12 en pesas, 5-8 con lastre y hasta 15 sin lastre.
+- **Pesas o lastre**:
+  - si en tu última sesión llegaste al tope en todas las series (o el RPE medio fue ≤ 7), propone **subir 2,5 kg** (5 kg en sentadilla y peso muerto) y volver al mínimo del rango;
+  - si no, propone **repetir el peso y sumar 1 repetición**.
+- Si la última vez llegaste **al fallo o RPE ≥ 9,5**, no propone subir: toca consolidar.
+- **Calistenia sin lastre**: busca +1 rep por serie. Al llegar a 15, propone pasar a la versión con lastre de la misma familia.
+- **Estáticos (tiempo)**: +5 segundos.
+
+### 19.3 Gráficas (Progreso → Músculos)
+- **Evolución (8 semanas)**: series por semana del músculo que elijas, con los colores del informe.
+- **Kg levantados y calorías por semana**.
+
+Funciones: `barChart()`, `muscleCharts()`. Por dentro, `weekMuscles()` usa `addMuscles()` y `addWorkoutMuscles()`, que también sirven para el mapa de un solo entreno.
+
+### 19.4 Compartir entreno
+En Calendario, abre un entreno y pulsa **Compartir**. `shareWorkout()` dibuja una imagen de 1080×1350 en un `<canvas>` con:
+- nombre, fecha, duración, kg, calorías y series;
+- la lista de ejercicios;
+- el mapa muscular de ese entreno.
+
+Se puede **compartir** (WhatsApp, Instagram... mediante `navigator.share`, si el móvil lo permite) o **guardar** como PNG.

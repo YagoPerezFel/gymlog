@@ -217,6 +217,15 @@ nav button.live::after{content:"";position:absolute;top:10px;right:11px;width:8p
 .estgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
 .estgrid>div{background:var(--field);border-radius:12px;padding:8px;display:flex;flex-direction:column;min-width:0}
 .estgrid small{color:var(--mut);font-size:11px;white-space:nowrap}.estgrid b{font-size:15px}
+/* v2.4: tipos de serie, sugerencias y gráficas */
+.setn{flex-direction:column;line-height:1.1}
+.setn small.rpe{font-size:10px;color:var(--mut);font-weight:500}
+.srow.wu .setn{color:var(--mut)}
+.srow.wu input{color:var(--mut)}
+.sug{display:flex;align-items:center;gap:12px;background:var(--field);border-radius:16px;padding:10px 12px;margin:6px 0 4px}
+.sug>div{flex:1;min-width:0}.sug b{display:block;font-size:14px}.sug small{color:var(--mut);font-size:12px}
+.sug>svg{color:var(--mut)}
+a.btn{text-decoration:none}
 </style>
 </head>
 <body>
