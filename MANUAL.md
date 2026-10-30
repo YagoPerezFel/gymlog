@@ -2,7 +2,7 @@
 
 Guía para entender cómo está hecha la app, qué hace cada archivo y cada función, y cómo modificarla o publicar cambios.
 
-**Versión descrita:** 0.6.0 · Historial de cambios: [CHANGELOG.md](CHANGELOG.md)
+**Versión descrita:** 0.6.1 · Historial de cambios: [CHANGELOG.md](CHANGELOG.md)
 **App publicada:** https://yagoperezfel.github.io/gymlog/
 **Código:** https://github.com/YagoPerezFel/gymlog
 
@@ -873,3 +873,16 @@ Es otro bloque `:root[data-theme=kingdom]` (ver sección 20).
 - Los botones usan la variable `--cmd`, el degradado azul tipo "menú de comandos".
 - El menú inferior convierte cada botón en una tecla de comando inclinada; la activa es dorada y lleva una corona (`nav button.on::before`).
 - Fuentes de Google: **Grenze Gotisch** (títulos) y **Cinzel** (subtítulos).
+
+### 21.6 Deslizar para borrar (v0.6.1)
+Las filas que se pueden borrar van envueltas así:
+```html
+<div class="swipe">
+  <div class="swipe-act"><button class="swdel" data-a="swDelSet">Eliminar</button></div>  ← botón rojo de fondo
+  <div class="swipe-fg"> ...la fila normal... </div>                                      ← lo que se desliza
+</div>
+```
+- Unos escuchadores de `pointerdown`, `pointermove` y `pointerup` en `document` mueven `.swipe-fg` con `translateX`. Si se suelta pasada la mitad del botón (`SW_W`, 92 px), la fila queda abierta (`.open`).
+- El gesto solo empieza si el movimiento es más horizontal que vertical. Con `touch-action: pan-y` el navegador sigue desplazando la página en vertical.
+- `swJust` evita que soltar el dedo tras deslizar cuente como un toque, y `swClose()` cierra las filas abiertas.
+- Acciones: `swDelSet` (borra la serie del entreno en curso) y `swDelRoutine` (borra la rutina tras confirmar).

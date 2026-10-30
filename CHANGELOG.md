@@ -7,6 +7,14 @@ Formato: `mayor.menor.parche`. Sube **menor** con funciones nuevas y **parche** 
 
 ---
 
+## 0.6.1 — Deslizar para borrar · 30 oct 2026
+**Nuevo**
+- **Deslizar a la izquierda una serie** del entreno en curso (también los tramos de cardio) muestra un botón **Eliminar** que la quita del entreno.
+- **Deslizar a la izquierda una rutina** en la pestaña Rutinas muestra **Eliminar**. Pide confirmación y el historial no se borra.
+- Solo hay una fila abierta a la vez; tocar fuera la cierra. El desplazamiento vertical de la página sigue funcionando con normalidad.
+
+---
+
 ## 0.6.0 — Perfil, medallas, niveles y estilo Kingdom · 30 oct 2026
 **Nuevo**
 - **Perfil de usuario** (botón con tu foto arriba a la derecha):
@@ -151,4 +159,5 @@ Formato: `mayor.menor.parche`. Sube **menor** con funciones nuevas y **parche** 
 | 0.4.0 | 2.4.0 | `8763b87` |
 | 0.5.0 | 2.5.0 | `f220405` |
 | 0.5.1 | — | `f69256f` |
-| 0.6.0 | — | perfil, medallas, Kingdom |
+| 0.6.0 | — | `d44d8c3` |
+| 0.6.1 | — | deslizar para borrar |

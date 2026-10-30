@@ -466,6 +466,26 @@ svg.medal.locked{filter:grayscale(1) brightness(.55);opacity:.55}
   background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2014%22%3E%3Cpath%20d%3D%22M1%2013L2%203L6.5%207.5L10%200L13.5%207.5L18%203L19%2013Z%22%20fill%3D%22%23e8c66a%22%20stroke%3D%22%23fff6cf%22%20stroke-width%3D%221%22/%3E%3C/svg%3E") center/contain no-repeat;filter:drop-shadow(0 0 4px rgba(232,198,106,.9))}
 [data-theme=kingdom] nav button.live::after{background:#5fe06a;box-shadow:0 0 6px #5fe06a;top:4px;right:5px}
 
+/* deslizar para borrar */
+.swipe{position:relative;overflow:hidden;border-radius:16px}
+.swipe-act{position:absolute;inset:0;display:flex;justify-content:flex-end;border-radius:inherit}
+.swipe:not(.open):not(.moving) .swipe-act{visibility:hidden}
+.swdel{width:92px;border:0;background:var(--dan);color:#fff;font:700 12px var(--font);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;border-radius:0 16px 16px 0}
+.swipe-fg{position:relative;touch-action:pan-y;transition:transform .22s ease;background:var(--card)}
+.srow.swipe-fg{border-radius:16px}
+.srow.swipe-fg.done{background:linear-gradient(rgba(var(--hl),.07),rgba(var(--hl),.07)),var(--card)}
+.swipe.rtw{overflow:visible;margin-bottom:12px;border-radius:var(--r)}
+.swipe.rtw .swdel{border-radius:0 var(--r) var(--r) 0}
+.swipe.rtw>.w{margin-bottom:0}
+[data-theme=light] .srow.swipe-fg{background:#fff}
+[data-theme=light] .srow.swipe-fg.done{background:#e9f9ee}
+[data-theme=persona] .swdel{border-radius:0;font-family:var(--title-font);font-weight:400;text-transform:uppercase;font-size:13px}
+[data-theme=persona] .srow.swipe-fg{background:#000}
+[data-theme=persona] .srow.swipe-fg.done{background:#e5141b}
+[data-theme=kingdom] .srow.swipe-fg{background:#0c1230}
+[data-theme=kingdom] .srow.swipe-fg.done{background:#14214f}
+[data-theme=kingdom] .swdel{background:linear-gradient(180deg,#ff6b6b,#b3222e);font-style:italic}
+
 /* ventanas de aviso propias */
 #dialog{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:60;display:flex;align-items:center;justify-content:center;padding:24px}
 .dlg{background:var(--sheet);color:var(--tx);border:1px solid var(--line);border-radius:24px;padding:22px 20px 18px;max-width:360px;width:100%;box-shadow:var(--pop)}

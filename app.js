@@ -1,7 +1,7 @@
 'use strict';
 
 // Versión de la app. Al publicar cambios hay que subirla aquí y en version.json
-const APP_VERSION = '0.6.0';
+const APP_VERSION = '0.6.1';
 
 // ---------- Utilidades ----------
 const KEY = 'gymlog_v1';
@@ -632,9 +632,10 @@ function celebrate(gain, before, after, lvBefore) {
 
 function routineCard(r, editable) {
   const groups = [...new Set(r.items.map(it => exInfo(it).group).filter(Boolean))].slice(0, 3).join(' · ');
-  return `<div class="w rt"><div class="rtinfo"><b>${esc(r.name)}</b><small>${r.items.length} ${r.items.length === 1 ? 'ejercicio' : 'ejercicios'}${groups ? ' · ' + esc(groups) : ''}</small></div>
+  const card = `<div class="w rt${editable ? ' swipe-fg' : ''}"><div class="rtinfo"><b>${esc(r.name)}</b><small>${r.items.length} ${r.items.length === 1 ? 'ejercicio' : 'ejercicios'}${groups ? ' · ' + esc(groups) : ''}</small></div>
     ${editable ? `<button class="round sm" data-a="editRoutine" data-id="${r.id}" aria-label="Editar">${ic('edit', 18)}</button>` : ''}
     <button class="round light" data-a="startRoutine" data-id="${r.id}" aria-label="Empezar">${ic('play', 20)}</button></div>`;
+  return editable ? `<div class="swipe rtw"><div class="swipe-act"><button class="swdel" data-a="swDelRoutine" data-id="${r.id}">${ic('trash', 20)}Eliminar</button></div>${card}</div>` : card;
 }
 
 function vWorkout() {
@@ -664,13 +665,14 @@ function exCard(x, i) {
     const p = prev[j];
     const phW = p && k === 'w' ? p.w : '';
     const phR = x.target || (p ? p.r : '');
-    return `<div class="srow${s.done ? ' done' : ''}${s.t === 'w' ? ' wu' : ''}">
+    return `<div class="swipe"><div class="swipe-act"><button class="swdel" data-a="swDelSet" data-i="${i}" data-j="${j}">${ic('trash', 20)}Eliminar</button></div>
+    <div class="srow swipe-fg${s.done ? ' done' : ''}${s.t === 'w' ? ' wu' : ''}">
       <button class="setn" data-a="setMenu" data-i="${i}" data-j="${j}">${s.pr ? ic('trophy', 18) : s.t ? SET_TYPES[s.t][1] : j + 1}${s.rpe ? `<small class="rpe">@${s.rpe}</small>` : ''}</button>
       <span class="prev">${p ? setText(k, p, ex) : '—'}</span>
       ${k === 'w' ? `<input inputmode="decimal" data-f="w" data-i="${i}" data-j="${j}" value="${esc(s.w)}" placeholder="${esc(phW)}">` : ''}
       <input inputmode="numeric" data-f="r" data-i="${i}" data-j="${j}" value="${esc(s.r)}" placeholder="${esc(phR)}">
       <button class="chk" data-a="toggle" data-i="${i}" data-j="${j}" aria-label="Hecha">${ic('check', 20)}</button>
-    </div>`;
+    </div></div>`;
   }).join('');
   return `<div class="card">
     <div class="ex-head"><button class="thumbbtn" data-a="viewEx" data-id="${x.exId}">${thumb(ex)}</button>
@@ -738,7 +740,8 @@ function cardioCard(x, i) {
   const rows = x.sets.map((s, j) => {
     const p = prev[j];
     const kc = profile().weight && s.done ? setKcal(ex, s, 0, rmrPerMin()) : 0;
-    return `<div class="srow cr${tm ? ' tm' : ''}${s.done ? ' done' : ''}">
+    return `<div class="swipe"><div class="swipe-act"><button class="swdel" data-a="swDelSet" data-i="${i}" data-j="${j}">${ic('trash', 20)}Eliminar</button></div>
+    <div class="srow cr swipe-fg${tm ? ' tm' : ''}${s.done ? ' done' : ''}">
       <button class="setn" data-a="delSet" data-i="${i}" data-j="${j}">${j + 1}</button>
       <input inputmode="decimal" data-f="r" data-i="${i}" data-j="${j}" value="${esc(s.r)}" placeholder="${p ? p.r : 'min'}">
       ${tm ? `<input inputmode="decimal" data-f="v" data-i="${i}" data-j="${j}" value="${esc(s.v)}" placeholder="${p && p.v ? p.v : 'km/h'}">
@@ -746,7 +749,7 @@ function cardioCard(x, i) {
         : `<select data-f="l" data-i="${i}" data-j="${j}">${lv.map((l, n) => `<option value="${n}"${String(s.l ?? 1) === String(n) ? ' selected' : ''}>${l[0].split(' (')[0]}</option>`).join('')}</select>`}
       <button class="chk" data-a="toggle" data-i="${i}" data-j="${j}" aria-label="Hecho">${ic('check', 20)}</button>
       ${kc ? `<span class="kc">≈ ${Math.round(kc)} kcal</span>` : ''}
-    </div>`;
+    </div></div>`;
   }).join('');
   return `<div class="card">
     <div class="ex-head"><button class="thumbbtn" data-a="viewEx" data-id="${x.exId}">${thumb(ex)}</button>
@@ -1504,6 +1507,16 @@ const A = {
       ['Eliminar serie', () => A.delSet(b, i, j), 'danger'],
     ]);
   },
+  // Botón que aparece al deslizar una serie a la izquierda
+  swDelSet(b, i, j) {
+    const x = db.active.exercises[i];
+    x.sets.splice(j, 1); save(); render(); toast(`Serie eliminada · ${exInfo(x).name}`);
+  },
+  async swDelRoutine(b, i, j, id) {
+    const r = db.routines.find(r => r.id === id);
+    if (!(await uiConfirm(`¿Eliminar la rutina «${r.name}»? Tu historial no se borra.`, 'Eliminar', true))) return swClose();
+    db.routines = db.routines.filter(x => x.id !== id); save(); render(); toast('Rutina eliminada');
+  },
   sugApply(b, i) {
     const x = db.active.exercises[i], sg = suggestion(x);
     if (!sg) return;
@@ -1730,7 +1743,53 @@ const A = {
   },
 };
 
+// ---------- Deslizar a la izquierda para mostrar "Eliminar" ----------
+// Funciona con dedo y ratón (pointer events). El desplazamiento vertical de la página no se ve afectado
+// gracias a touch-action: pan-y en las filas. Solo una fila abierta a la vez.
+const SW_W = 92;
+let sw = null, swJust = false;
+function swClose(except) {
+  document.querySelectorAll('.swipe.open,.swipe.moving').forEach(box => {
+    if (box === except) return;
+    box.classList.remove('open', 'moving');
+    box.querySelector('.swipe-fg').style.transform = '';
+  });
+}
+document.addEventListener('pointerdown', e => {
+  if (!e.target.closest('.swipe')) swClose();
+  const fg = e.target.closest('.swipe-fg');
+  if (!fg) return;
+  sw = { fg, box: fg.parentElement, x0: e.clientX, y0: e.clientY, dx: 0, dir: null, base: fg.parentElement.classList.contains('open') ? -SW_W : 0 };
+}, { passive: true });
+document.addEventListener('pointermove', e => {
+  if (!sw) return;
+  const dx = e.clientX - sw.x0, dy = e.clientY - sw.y0;
+  if (!sw.dir) {
+    if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+    sw.dir = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+    if (sw.dir === 'h') { swClose(sw.box); sw.box.classList.add('moving'); sw.fg.style.transition = 'none'; }
+  }
+  if (sw.dir !== 'h') return;
+  sw.dx = dx;
+  sw.fg.style.transform = `translateX(${Math.max(-SW_W - 40, Math.min(0, sw.base + dx))}px)`;
+}, { passive: true });
+function swEnd() {
+  if (!sw) return;
+  const { fg, box, dir, dx, base } = sw;
+  sw = null;
+  if (dir !== 'h') return;
+  fg.style.transition = '';
+  const open = base + dx < -SW_W / 2;
+  box.classList.toggle('open', open);
+  box.classList.toggle('moving', open);
+  fg.style.transform = open ? `translateX(-${SW_W}px)` : '';
+  swJust = true; setTimeout(() => { swJust = false; }, 60);   // evita que el gesto cuente como toque
+}
+document.addEventListener('pointerup', swEnd);
+document.addEventListener('pointercancel', swEnd);
+
 document.addEventListener('click', e => {
+  if (swJust) { e.preventDefault(); return; }
   const b = e.target.closest('[data-a]');
   if (!b || !A[b.dataset.a]) return;
   A[b.dataset.a](b, +b.dataset.i, +b.dataset.j, b.dataset.id, e);
