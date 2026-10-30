@@ -14,7 +14,7 @@ Formato: `mayor.menor.parche`. Sube **menor** con funciones nuevas y **parche** 
   - medidas básicas y vitrina de medallas.
 - **Experiencia y nivel**:
   - cada kg levantado (con tu peso corporal en calistenia) es 1 punto;
-  - del nivel 1 al 2 hacen falta 2.000 kg, y cada nivel pide un 12 % más;
+  - del nivel 1 al 2 hacen falta 2.000 kg, y cada nivel pide un 10 % más;
   - se calcula también con todo tu historial;
   - la barra de experiencia cambia según el estilo.
 - **Títulos**: por nivel (Novato, Aprendiz, Constante, Guerrero, Veterano, Campeón, Élite, Titán, Leyenda, Mito, Inmortal), por medallas en nivel Maestro (p. ej. "Maestro de las dominadas") y por medallas secretas.
@@ -28,6 +28,10 @@ Formato: `mayor.menor.parche`. Sube **menor** con funciones nuevas y **parche** 
 - **Celebración al terminar un entreno**: experiencia ganada, subida de nivel y medallas nuevas.
 - **Estilo Kingdom** (inspirado en Kingdom Hearts, con símbolos propios): fondo de retícula con corazones, coronas y estrellas, títulos góticos plateados, detalles dorados, botones tipo "menú de comandos", anillo verde como la barra de vida y **menú inferior con botones de comando** (el activo dorado y con corona).
 - **Icono nuevo** de la app.
+- **38 ejercicios de calentamiento y estiramiento** en español (antes solo existían en el catálogo en inglés):
+  - **Calentamiento**: jumping jacks, skipping, talones al glúteo, escaladores, círculos articulares, rotaciones de tronco, inchworm, estiramiento más grande del mundo, gato-camello, band pull-apart, retracciones escapulares, puente de glúteo, dead bug, superman, molinos.
+  - **Estiramientos** por tiempo: isquios, cuádriceps, flexores de cadera, glúteo, aductores, gemelos, pecho, hombro, tríceps, dorsales, espalda alta, antebrazos, postura del niño, torsión de columna, cintilla iliotibial, corredor, puntas de pies, cuello.
+  - Suman calorías (MET 2,3 / 3,5 / 7,5), pero no cuentan en músculos, kg ni experiencia. Al añadirlos, el descanso empieza en 0.
 
 **Cambiado**
 - **Ventanas de aviso propias** en lugar de las del navegador (ya no aparece "yagoperezfel.github.io dice"). Al terminar un entreno:

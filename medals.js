@@ -139,8 +139,8 @@ const medalKey = list => Object.fromEntries(list.map(m => [m.id, m.tier]));
 
 // ---------- Experiencia y nivel ----------
 // XP = kg levantados en cada entreno (incluye tu peso corporal en calistenia).
-// Del nivel 1 al 2 hacen falta 2.000 kg; cada nivel siguiente pide un 12 % más.
-const XP_BASE = 2000, XP_GROWTH = 1.12;
+// Del nivel 1 al 2 hacen falta 2.000 kg; cada nivel siguiente pide un 10 % más.
+const XP_BASE = 2000, XP_GROWTH = 1.10;
 const xpForLevel = n => Math.round(XP_BASE * XP_GROWTH ** (n - 1));
 const totalXP = () => db.history.reduce((a, h) => a + workoutVolume(h), 0);
 function levelInfo(xp = totalXP()) {

@@ -845,8 +845,8 @@ Se abre con el botón redondo de arriba a la derecha (`avatarBtn()`), que muestr
 ### 21.2 Experiencia y nivel (`medals.js`)
 ```
 XP total = suma de los kg levantados en todos tus entrenos      (totalXP)
-XP para pasar del nivel n al n+1 = 2.000 × 1,12^(n-1)           (xpForLevel)
-   → nivel 1→2: 2.000 · 2→3: 2.240 · 3→4: 2.509 · 10→11: 6.210 · 20→21: 19.290
+XP para pasar del nivel n al n+1 = 2.000 × 1,10^(n-1)           (xpForLevel)
+   → nivel 1→2: 2.000 · 2→3: 2.200 · 3→4: 2.420 · 10→11: 4.716 · 20→21: 12.232
 ```
 `levelInfo()` devuelve el nivel, lo que llevas del actual y lo que te falta. `xpBar()` dibuja la barra; su aspecto cambia con el estilo mediante las reglas `.xp` de cada tema en `index.html`. Los cardio sin kg no dan experiencia.
 
@@ -856,6 +856,8 @@ XP para pasar del nivel n al n+1 = 2.000 × 1,12^(n-1)           (xpForLevel)
 - **Estado**: `medalStates()` compara cada estadística con sus umbrales y da el nivel conseguido y la siguiente meta.
 - **Dibujo**: `medalSvg()` genera un escudo hexagonal con el degradado del nivel (`TIERS`). Desde Oro gana alas, desde Diamante destellos y en Maestro una corona. El pictograma del centro sale de `GLYPHS`.
 - **Celebración**: `finish()` guarda el estado antes y después del entreno y `celebrate()` muestra la experiencia ganada, si subes de nivel y las medallas nuevas.
+
+**Calentamiento y estiramientos**: grupos `Calentamiento` y `Estiramientos` de `data.js`, con MET `MET.warmup` (3,5), `MET.stretch` (2,3) o `MET.plyo` (7,5). No tienen músculos ni % de peso corporal, así que no cuentan en el informe muscular, los kg ni la experiencia. `defRest()` les pone el descanso a 0.
 
 **Añadir una medalla**: añade una fila a `MEDAL_DEFS` y, si mide algo nuevo, calcula ese valor en `computeStats()`.
 

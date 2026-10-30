@@ -40,6 +40,8 @@ const MET = {
   plyo: 7.5,        // 02020 Calistenia vigorosa (burpees, saltos)
   core: 2.8,        // 02024 Calistenia ligera (crunch, plancha)
   bodyweight: 3.0,  // 02056 Ejercicios con peso corporal, general
+  warmup: 3.5,      // 02030 Calistenia ligera/moderada general (movilidad, calentamiento)
+  stretch: 2.3,     // 02101 Estiramientos suaves
 };
 
 // ---------- Cardio: niveles de intensidad por máquina (Compendio 2024) ----------
@@ -147,6 +149,46 @@ const DEFAULT_EX_DATA = [
   ['Planche', 'Calistenia', 't', '', 'shoulders,chest', 'triceps,abs', 0, MET.cali],
   ['Pino (handstand)', 'Calistenia', 't', '', 'shoulders', 'triceps,traps,abs', 0, MET.cali],
   ['Colgado pasivo (dead hang)', 'Calistenia', 't', '', 'forearms', 'back', 0, MET.core],
+  // Calentamiento y movilidad (v0.6): no cuentan en músculos, kg ni experiencia; sí en calorías
+  ['Saltos de tijera (jumping jacks)', 'Calentamiento', 't', '', '', '', 0, MET.plyo],
+  ['Skipping (rodillas al pecho)', 'Calentamiento', 't', '', '', '', 0, MET.plyo],
+  ['Talones al glúteo', 'Calentamiento', 't', 'Single_Leg_Butt_Kick', '', '', 0, MET.plyo],
+  ['Escaladores (mountain climbers)', 'Calentamiento', 't', 'Mountain_Climbers', '', '', 0, MET.plyo],
+  ['Círculos de brazos', 'Calentamiento', 't', 'Arm_Circles', '', '', 0, MET.warmup],
+  ['Círculos de hombros', 'Calentamiento', 't', 'Shoulder_Circles', '', '', 0, MET.warmup],
+  ['Círculos de cadera', 'Calentamiento', 't', 'Standing_Hip_Circles', '', '', 0, MET.warmup],
+  ['Círculos de rodillas', 'Calentamiento', 't', 'Knee_Circles', '', '', 0, MET.warmup],
+  ['Círculos de muñecas', 'Calentamiento', 't', 'Wrist_Circles', '', '', 0, MET.warmup],
+  ['Círculos de tobillos', 'Calentamiento', 't', 'Ankle_Circles', '', '', 0, MET.warmup],
+  ['Rotaciones de tronco', 'Calentamiento', 't', 'Torso_Rotation', '', '', 0, MET.warmup],
+  ['Inchworm (gusano)', 'Calentamiento', 'r', 'Inchworm', '', '', 0, MET.warmup],
+  ['Estiramiento más grande del mundo', 'Calentamiento', 'r', 'Worlds_Greatest_Stretch', '', '', 0, MET.warmup],
+  ['Gato-camello', 'Calentamiento', 'r', 'Cat_Stretch', '', '', 0, MET.warmup],
+  ['Separaciones con banda (band pull-apart)', 'Calentamiento', 'r', 'Band_Pull_Apart', '', '', 0, MET.warmup],
+  ['Retracciones escapulares en barra', 'Calentamiento', 'r', 'Scapular_Pull-Up', '', '', 0, MET.warmup],
+  ['Puente de glúteo', 'Calentamiento', 'r', 'Butt_Lift_Bridge', '', '', 0, MET.warmup],
+  ['Dead bug', 'Calentamiento', 'r', 'Dead_Bug', '', '', 0, MET.warmup],
+  ['Superman', 'Calentamiento', 'r', 'Superman', '', '', 0, MET.warmup],
+  ['Molinos (windmills)', 'Calentamiento', 'r', 'Windmills', '', '', 0, MET.warmup],
+  // Estiramientos (v0.6), por tiempo
+  ['Estiramiento de isquiotibiales', 'Estiramientos', 't', 'Hamstring_Stretch', '', '', 0, MET.stretch],
+  ['Estiramiento de cuádriceps', 'Estiramientos', 't', 'Quad_Stretch', '', '', 0, MET.stretch],
+  ['Estiramiento de flexores de cadera', 'Estiramientos', 't', 'Kneeling_Hip_Flexor', '', '', 0, MET.stretch],
+  ['Estiramiento de glúteo', 'Estiramientos', 't', 'Lying_Glute', '', '', 0, MET.stretch],
+  ['Estiramiento de aductores (mariposa)', 'Estiramientos', 't', 'Butterfly', '', '', 0, MET.stretch],
+  ['Estiramiento de gemelos', 'Estiramientos', 't', 'Calf_Stretch_Hands_Against_Wall', '', '', 0, MET.stretch],
+  ['Estiramiento de pecho', 'Estiramientos', 't', 'Dynamic_Chest_Stretch', '', '', 0, MET.stretch],
+  ['Estiramiento de hombro', 'Estiramientos', 't', 'Shoulder_Stretch', '', '', 0, MET.stretch],
+  ['Estiramiento de tríceps', 'Estiramientos', 't', 'Triceps_Stretch', '', '', 0, MET.stretch],
+  ['Estiramiento de dorsales', 'Estiramientos', 't', 'Overhead_Lat', '', '', 0, MET.stretch],
+  ['Estiramiento de espalda alta', 'Estiramientos', 't', 'Upper_Back_Stretch', '', '', 0, MET.stretch],
+  ['Estiramiento de antebrazos y muñecas', 'Estiramientos', 't', 'Kneeling_Forearm_Stretch', '', '', 0, MET.stretch],
+  ['Postura del niño', 'Estiramientos', 't', 'Childs_Pose', '', '', 0, MET.stretch],
+  ['Torsión de columna', 'Estiramientos', 't', 'Spinal_Stretch', '', '', 0, MET.stretch],
+  ['Estiramiento de cintilla iliotibial', 'Estiramientos', 't', 'IT_Band_and_Glute_Stretch', '', '', 0, MET.stretch],
+  ['Estiramiento del corredor', 'Estiramientos', 't', 'Runners_Stretch', '', '', 0, MET.stretch],
+  ['Tocar las puntas de los pies', 'Estiramientos', 't', 'Standing_Toe_Touches', '', '', 0, MET.stretch],
+  ['Estiramiento de cuello', 'Estiramientos', 't', 'Chin_To_Chest_Stretch', '', '', 0, MET.stretch],
 ];
 // Movimientos que comparten récord aunque sean ejercicios distintos (con y sin lastre),
 // para estimar repeticiones con otros pesos a partir de cualquiera de ellos.
@@ -157,7 +199,8 @@ const FAMILY = {
   'Dominadas supinas (chin ups)': 'chinup', 'Dominadas supinas con lastre': 'chinup',
 };
 // Ejercicios por defecto añadidos en cada versión (para dárselos también a quien ya tenía datos)
-const NEW_DEFAULTS = { 5: ['Dominadas supinas con lastre'] };
+const NEW_DEFAULTS = { 5: ['Dominadas supinas con lastre'],
+  6: ['Saltos de tijera (jumping jacks)', 'Skipping (rodillas al pecho)', 'Talones al glúteo', 'Escaladores (mountain climbers)', 'Círculos de brazos', 'Círculos de hombros', 'Círculos de cadera', 'Círculos de rodillas', 'Círculos de muñecas', 'Círculos de tobillos', 'Rotaciones de tronco', 'Inchworm (gusano)', 'Estiramiento más grande del mundo', 'Gato-camello', 'Separaciones con banda (band pull-apart)', 'Retracciones escapulares en barra', 'Puente de glúteo', 'Dead bug', 'Superman', 'Molinos (windmills)', 'Estiramiento de isquiotibiales', 'Estiramiento de cuádriceps', 'Estiramiento de flexores de cadera', 'Estiramiento de glúteo', 'Estiramiento de aductores (mariposa)', 'Estiramiento de gemelos', 'Estiramiento de pecho', 'Estiramiento de hombro', 'Estiramiento de tríceps', 'Estiramiento de dorsales', 'Estiramiento de espalda alta', 'Estiramiento de antebrazos y muñecas', 'Postura del niño', 'Torsión de columna', 'Estiramiento de cintilla iliotibial', 'Estiramiento del corredor', 'Tocar las puntas de los pies', 'Estiramiento de cuello'] };
 
 // Sinónimos para el buscador (español e inglés) según el movimiento
 const FAM_ALIASES = {

@@ -120,13 +120,14 @@ function load() {
   try { d = JSON.parse(localStorage.getItem(KEY)); } catch (e) { }
   if (!d) d = {
     exercises: DEFAULT_EX_DATA.map(e => ({ id: uid(), ...exFromData(e) })),
-    routines: [], history: [], active: null, dataVer: 5,
+    routines: [], history: [], active: null, dataVer: 6,
   };
   d.body ||= [];
   // Datos de versiones anteriores: añade la foto a los ejercicios por defecto
   if ((d.dataVer || 0) < 3) migrateV3(d);
   if (d.dataVer < 4) migrateV4(d);
   if (d.dataVer < 5) addNewDefaults(d, 5);
+  if (d.dataVer < 6) addNewDefaults(d, 6);
   d.profile = Object.assign({ sex: '', birthYear: null, height: null }, d.profile);
   d.user = Object.assign({ name: '', photo: '', title: '' }, d.user);
   if (!d.profile.height) { const h = d.body.filter(e => e.height).sort((a, b) => b.date - a.date)[0]; if (h) d.profile.height = h.height; }
@@ -213,6 +214,8 @@ function save() {
 }
 
 const exById = id => db.exercises.find(e => e.id === id);
+// Descanso inicial al añadir un ejercicio: 0 en cardio, calentamiento y estiramientos
+const defRest = ex => ex.kind === 'c' || ['Calentamiento', 'Estiramientos'].includes(ex.group) ? 0 : db.settings.rest;
 const exInfo = x => exById(x.exId) || { name: x.name || '(eliminado)', group: '', kind: x.kind || 'w', img: '' };
 
 // Series del último entreno que incluyó este ejercicio
@@ -1470,7 +1473,7 @@ const A = {
   addEx() {
     openPicker(id => {
       const ex = exById(id);
-      db.active.exercises.push({ exId: id, rest: ex.kind === 'c' ? 0 : db.settings.rest, target: '', sets: [{ w: '', r: '', v: '', g: '', l: '1', done: false }] });
+      db.active.exercises.push({ exId: id, rest: defRest(ex), target: '', sets: [{ w: '', r: '', v: '', g: '', l: '1', done: false }] });
       save(); render();
       scrollTo(0, document.body.scrollHeight);
     });
@@ -1606,7 +1609,7 @@ const A = {
   // Rutinas
   newRoutine() { draft = { id: null, name: '', items: [] }; render(); },
   editRoutine(b, i, j, id) { draft = JSON.parse(JSON.stringify(db.routines.find(r => r.id === id))); render(); },
-  rAddEx() { openPicker(id => { const k = exById(id).kind; draft.items.push({ exId: id, sets: k === 'c' ? 1 : 3, reps: k === 't' ? '30' : k === 'c' ? '20' : '10', rest: k === 'c' ? 0 : db.settings.rest }); render(); }); },
+  rAddEx() { openPicker(id => { const k = exById(id).kind; draft.items.push({ exId: id, sets: k === 'c' ? 1 : 3, reps: k === 't' ? '30' : k === 'c' ? '20' : '10', rest: defRest(exById(id)) }); render(); }); },
   rMove(b, i, j) { moveItem(draft.items, i, j); render(); },
   rDel(b, i) { draft.items.splice(i, 1); render(); },
   rCancel() { draft = null; render(); },
