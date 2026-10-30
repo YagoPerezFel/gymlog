@@ -7,6 +7,35 @@ Formato: `mayor.menor.parche`. Sube **menor** con funciones nuevas y **parche** 
 
 ---
 
+## 0.7.0 — Rutinas serie a serie y modo concentración · 30 oct 2026
+**Crear rutinas**
+- **Cada serie se configura por separado**: tipo (aproximación, normal, al fallo, drop set), repeticiones y, si quieres, kg. Si dejas los kg en «auto», se usan los de la última vez o la sugerencia.
+- **Añadir varios ejercicios a la vez**: en el buscador se marcan todos los que quieras (se numeran en orden) y se añaden juntos. También funciona en el entreno en curso.
+- **Duplicar rutina**: guarda la rutina y abre una copia para editarla.
+- **Nota por ejercicio** (p. ej. "agarre neutro"), visible durante el entreno.
+- **Ordenar arrastrando** desde el asa ⋮⋮. Cerca de los bordes de la pantalla la página se desplaza sola. Los ejercicios se pliegan para verlos de un vistazo.
+- **Plan semanal**: asigna días a cada rutina. Inicio muestra «Hoy toca» con un botón para empezar (o «Hoy descanso · Próximo: …»), y Rutinas muestra la semana entera.
+
+**Durante el entreno**
+- **Modo concentración** (botón junto a ⋯): una serie cada vez, con la **foto del ejercicio animada** (posición inicial y final). También se ven la nota, el número de serie, lo que hiciste la última vez, botones grandes y «Serie hecha». Al marcarla pasa sola a la siguiente, y las flechas sobre la foto cambian de ejercicio.
+- **Botones − / +** para el peso (saltos de 1,25, 2,5 o 5 kg; toca «±» para cambiarlo) y para las repeticiones.
+- **Rellenar con la última vez**: por ejercicio (menú ⋯ o modo concentración) o para todo el entreno (menú del entreno).
+- **El temporizador dice qué viene después** con el peso y las repeticiones previstas (p. ej. «Fondos con lastre · serie 1 · +20 kg × 8»).
+- **Cambiar por otro parecido**: propone ejercicios de la misma familia o que trabajan los mismos músculos (p. ej. Fondos → Fondos con lastre, en anillas, flexiones diamante…). Las series ya hechas se quedan en el ejercicio original.
+- **Series de aproximación automáticas** en ejercicios con peso, según los estudios:
+  - 2 en el primer ejercicio de cada músculo (≈50 % × 6 y ≈80 % × 3);
+  - 1 en los siguientes ejercicios de ese músculo (≈70 % × 4);
+  - con lastre, el % se calcula sobre tu peso + lastre;
+  - después de ellas, el descanso es corto (máximo 1 min).
+
+  Se pueden desactivar por ejercicio en la rutina o añadir a mano desde el menú ⋯.
+
+**Mejoras**
+- La columna «Anterior» empareja las series por clase (aproximación con aproximación, trabajo con trabajo), así las aproximaciones no descolocan la comparación.
+- Las rutinas antiguas se convierten solas al abrirlas; no se pierde nada.
+
+---
+
 ## 0.6.1 — Deslizar para borrar · 30 oct 2026
 **Nuevo**
 - **Deslizar a la izquierda una serie** del entreno en curso (también los tramos de cardio) muestra un botón **Eliminar** que la quita del entreno.

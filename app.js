@@ -1,7 +1,7 @@
 'use strict';
 
 // Versión de la app. Al publicar cambios hay que subirla aquí y en version.json
-const APP_VERSION = '0.6.1';
+const APP_VERSION = '0.7.0';
 
 // ---------- Utilidades ----------
 const KEY = 'gymlog_v1';
@@ -66,6 +66,12 @@ const ICONS = {
   book: '<path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5zM5 19.5A1.5 1.5 0 0 0 6.5 21H19"/>',
   image: '<rect x="3.5" y="4.5" width="17" height="15" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="M20.5 16l-5-5-8.5 8.5"/>',
   copy: '<rect x="8.5" y="8.5" width="12" height="12" rx="3"/><path d="M15.5 8.5V6a2.5 2.5 0 0 0-2.5-2.5H6A2.5 2.5 0 0 0 3.5 6v7A2.5 2.5 0 0 0 6 15.5h2.5"/>',
+  grip: '<circle cx="9" cy="6" r="1.3" fill="currentColor"/><circle cx="15" cy="6" r="1.3" fill="currentColor"/><circle cx="9" cy="12" r="1.3" fill="currentColor"/><circle cx="15" cy="12" r="1.3" fill="currentColor"/><circle cx="9" cy="18" r="1.3" fill="currentColor"/><circle cx="15" cy="18" r="1.3" fill="currentColor"/>',
+  focus: '<path d="M4 9V5.5A1.5 1.5 0 0 1 5.5 4H9M15 4h3.5A1.5 1.5 0 0 1 20 5.5V9M20 15v3.5a1.5 1.5 0 0 1-1.5 1.5H15M9 20H5.5A1.5 1.5 0 0 1 4 18.5V15"/><circle cx="12" cy="12" r="2.5"/>',
+  list: '<path d="M9 6.5h10.5M9 12h10.5M9 17.5h10.5"/><circle cx="4.8" cy="6.5" r="1" fill="currentColor"/><circle cx="4.8" cy="12" r="1" fill="currentColor"/><circle cx="4.8" cy="17.5" r="1" fill="currentColor"/>',
+  minus: '<path d="M5 12h14"/>',
+  note: '<path d="M6 3.5h8.5l4 4v13H6z"/><path d="M14 3.5V8h4.5M9 12.5h6M9 16h6"/>',
+  swap: '<path d="M4.5 8h14L15 4.5M19.5 16h-14L9 19.5"/>',
 };
 const ic = (name, size) => `<svg class="i i-${name}" viewBox="0 0 24 24"${size ? ` style="width:${size}px;height:${size}px"` : ''}>${ICONS[name] || ''}</svg>`;
 
@@ -114,6 +120,9 @@ let updateInfo = null;    // { version, files } si hay una versión nueva en Git
 let musWeek = 0;          // semana del informe muscular (0 = esta semana, -1 = la anterior...)
 let bodySide = 'both';    // vista del mapa corporal
 let musSel = null;        // músculo elegido en la gráfica de evolución
+let pickSel = null;       // selección múltiple del buscador de ejercicios (null = elegir uno)
+let rOpened = new Set();  // ejercicios desplegados en el editor de rutinas
+let fImgN = 0;            // foto que se ve en el modo concentración (0 = inicio, 1 = final del movimiento)
 
 function load() {
   let d = null;
@@ -230,6 +239,31 @@ function lastSets(exId) {
 const SET_TYPES = { '': ['Normal', ''], w: ['Calentamiento', 'C'], f: ['Al fallo', 'F'], d: ['Drop set', 'D'] };
 const isWork = s => s.t !== 'w';
 const setTag = s => (s.t ? ' ' + SET_TYPES[s.t][1] : '') + (s.rpe ? ` @${s.rpe}` : '');
+const newSet = (o = {}) => ({ w: '', r: '', v: '', g: '', l: '1', done: false, ...o });
+// Serie equivalente de la última vez: se emparejan por orden dentro de su clase (aproximación o trabajo),
+// así añadir series de aproximación no descoloca la comparación con las series de trabajo
+function prevFor(x, j, prev = lastSets(x.exId)) {
+  const wk = isWork(x.sets[j]), k = x.sets.slice(0, j).filter(z => isWork(z) === wk).length;
+  return prev.filter(z => isWork(z) === wk)[k] || null;
+}
+// Objetivo de repeticiones de una serie: el de esa serie en la rutina o el general del ejercicio
+const tgtR = (x, s) => s.tr || (isWork(s) ? x.target : '') || '';
+// Valores previstos de una serie: lo escrito, si no el plan de la rutina, si no lo de la última vez
+function planned(x, j) {
+  const s = x.sets[j], p = prevFor(x, j);
+  return { w: s.w !== '' ? s.w : s.tw || (p && p.w ? String(p.w) : ''), r: s.r !== '' ? s.r : tgtR(x, s) || (p && p.r ? String(p.r) : '') };
+}
+// "serie 2" / "aproximación 1" (contando dentro de su clase)
+function setLabel(x, j) {
+  const s = x.sets[j], k = x.sets.slice(0, j).filter(z => isWork(z) === isWork(s)).length;
+  return `${isWork(s) ? 'serie' : 'aproximación'} ${k + 1}`;
+}
+function plannedText(ex, pl) {
+  if (ex.kind === 'c') return pl.r ? `${pl.r} min` : '';
+  if (ex.kind === 't') return pl.r ? `${pl.r} s` : '';
+  if (ex.kind === 'r') return pl.r ? `${pl.r} reps` : '';
+  return pl.w || pl.r ? `${ex.bw ? '+' : ''}${pl.w ? fdec(num(pl.w)) : '?'} kg × ${pl.r || '?'}` : '';
+}
 
 function setText(kind, s, x) {
   if (kind === 'c') {
@@ -466,6 +500,7 @@ function render() {
     b.classList.toggle('on', b.dataset.view === navView);
     b.classList.toggle('live', b.dataset.view === 'home' && !!db.active);
   });
+  document.body.classList.toggle('focus', view === 'workout' && !!db.active && !!db.active.focus);
   const fn = { home: vHome, workout: vWorkout, routines: vRoutines, calendar: vCalendar, progress: vProgress, settings: vSettings, user: vUser }[view];
   $('#app').innerHTML = fn();
   renderTimer();
@@ -554,7 +589,7 @@ function vHome() {
   const today = db.user.name.trim() ? `Hola, ${esc(db.user.name.trim().split(/\s+/)[0])} · ${new Date().toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}`
     : cap(new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }));
   return header('Entrenar', `<button class="round" data-a="startEmpty" aria-label="Entreno libre">${ic('plus')}</button>`, today)
-    + updateBanner() + installCard() + notifTip + active +
+    + updateBanner() + installCard() + notifTip + active + todayCard() +
     `<div class="wgrid">
       <button class="w sq" data-a="go" data-id="calendar">${ring(weekCount, goal)}<span class="wico">${ic('chevR', 18)}</span>
         <div class="wfoot"><b>Esta semana</b><small>${weekCount} de ${goal} entrenos</small></div></button>
@@ -575,6 +610,39 @@ function vHome() {
     </div>
     <div class="sec"><h2>Rutinas</h2><button class="link" data-a="go" data-id="routines">Ver todas</button></div>
     ${db.routines.map(r => routineCard(r, false)).join('') || `<button class="w wide banner" data-a="newRoutineGo">${ic('plus')}<div><b>Crea tu primera rutina</b><p>Guarda tus ejercicios, series y descansos.</p></div></button>`}`;
+}
+
+// ---------- Plan semanal ----------
+// Cada rutina puede tener días asignados (0 = lunes ... 6 = domingo)
+const DAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+const DAY_NAMES = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+const weekday = (ts = Date.now()) => (new Date(ts).getDay() + 6) % 7;
+const daysText = r => (r.days || []).slice().sort().map(k => DAYS[k]).join(' · ');
+function todayCard() {
+  if (db.active) return '';
+  const planned = db.routines.filter(r => (r.days || []).length);
+  if (!planned.length) return '';
+  const t = weekday(), today = dayKey(Date.now()), list = planned.filter(r => r.days.includes(t));
+  if (list.length) return list.map(r => {
+    const done = db.history.some(h => h.routineId === r.id && dayKey(h.start) === today);
+    return `<div class="w wide today${done ? ' done' : ''}"><div class="hrow"><div class="rtinfo"><small>Hoy toca · ${DAY_NAMES[t]}</small><b>${esc(r.name)}</b>
+      <small>${r.items.length} ${r.items.length === 1 ? 'ejercicio' : 'ejercicios'}${done ? ' · hecho hoy' : ''}</small></div>
+      ${done ? `<span class="round sm">${ic('check', 18)}</span>` : `<button class="round light" data-a="startRoutine" data-id="${r.id}" aria-label="Empezar">${ic('play', 20)}</button>`}</div></div>`;
+  }).join('');
+  for (let d = 1; d < 7; d++) {
+    const k = (t + d) % 7, r = planned.find(r => r.days.includes(k));
+    if (r) return `<div class="w wide today rest"><div class="rtinfo"><small>Hoy descanso</small><b>Próximo: ${cap(DAY_NAMES[k])}${d === 1 ? ' (mañana)' : ''}</b><small>${esc(r.name)}</small></div></div>`;
+  }
+  return '';
+}
+// Tira con la semana (pestaña Rutinas)
+function weekStrip() {
+  if (!db.routines.some(r => (r.days || []).length)) return '';
+  const t = weekday();
+  return `<div class="week">${DAYS.map((d, k) => {
+    const rs = db.routines.filter(r => (r.days || []).includes(k));
+    return `<div class="${k === t ? 'now' : ''}${rs.length ? ' on' : ''}"><b>${d}</b><small>${rs.length ? rs.map(r => esc(r.name)).join('<br>') : '—'}</small></div>`;
+  }).join('')}</div>`;
 }
 
 function homeMuscles() {
@@ -632,7 +700,8 @@ function celebrate(gain, before, after, lvBefore) {
 
 function routineCard(r, editable) {
   const groups = [...new Set(r.items.map(it => exInfo(it).group).filter(Boolean))].slice(0, 3).join(' · ');
-  const card = `<div class="w rt${editable ? ' swipe-fg' : ''}"><div class="rtinfo"><b>${esc(r.name)}</b><small>${r.items.length} ${r.items.length === 1 ? 'ejercicio' : 'ejercicios'}${groups ? ' · ' + esc(groups) : ''}</small></div>
+  const days = daysText(r);
+  const card = `<div class="w rt${editable ? ' swipe-fg' : ''}"><div class="rtinfo"><b>${esc(r.name)}</b><small>${r.items.length} ${r.items.length === 1 ? 'ejercicio' : 'ejercicios'}${groups ? ' · ' + esc(groups) : ''}</small>${days ? `<small class="rdays">${ic('calendar', 14)} ${days}</small>` : ''}</div>
     ${editable ? `<button class="round sm" data-a="editRoutine" data-id="${r.id}" aria-label="Editar">${ic('edit', 18)}</button>` : ''}
     <button class="round light" data-a="startRoutine" data-id="${r.id}" aria-label="Empezar">${ic('play', 20)}</button></div>`;
   return editable ? `<div class="swipe rtw"><div class="swipe-act"><button class="swdel" data-a="swDelRoutine" data-id="${r.id}">${ic('trash', 20)}Eliminar</button></div>${card}</div>` : card;
@@ -641,8 +710,10 @@ function routineCard(r, editable) {
 function vWorkout() {
   const w = db.active;
   if (!w) { view = 'home'; return vHome(); }
+  if (w.focus) return vFocus();
   return `<header class="top"><button class="round" data-a="go" data-id="home" aria-label="Inicio">${ic('back')}</button>
       <div class="wk-t"><input class="wk-name" data-f="wkName" value="${esc(w.name)}"><span id="elapsed">${fmt((Date.now() - w.start) / 1000)}</span></div>
+      <button class="round" data-a="focusOn" aria-label="Modo concentración">${ic('focus')}</button>
       <button class="round" data-a="wkMenu" aria-label="Opciones">${ic('more')}</button></header>
     ${liveStats()}
     ${w.exercises.map(exCard).join('') || '<p class="muted center" style="margin:40px 0">Añade tu primer ejercicio</p>'}
@@ -662,9 +733,9 @@ function exCard(x, i) {
   if (exInfo(x).kind === 'c') return cardioCard(x, i);
   const ex = exInfo(x), k = ex.kind, prev = lastSets(x.exId);
   const rows = x.sets.map((s, j) => {
-    const p = prev[j];
-    const phW = p && k === 'w' ? p.w : '';
-    const phR = x.target || (p ? p.r : '');
+    const p = prevFor(x, j, prev);
+    const phW = s.tw || (p && k === 'w' ? p.w : '');
+    const phR = tgtR(x, s) || (p ? p.r : '');
     return `<div class="swipe"><div class="swipe-act"><button class="swdel" data-a="swDelSet" data-i="${i}" data-j="${j}">${ic('trash', 20)}Eliminar</button></div>
     <div class="srow swipe-fg${s.done ? ' done' : ''}${s.t === 'w' ? ' wu' : ''}">
       <button class="setn" data-a="setMenu" data-i="${i}" data-j="${j}">${s.pr ? ic('trophy', 18) : s.t ? SET_TYPES[s.t][1] : j + 1}${s.rpe ? `<small class="rpe">@${s.rpe}</small>` : ''}</button>
@@ -678,6 +749,7 @@ function exCard(x, i) {
     <div class="ex-head"><button class="thumbbtn" data-a="viewEx" data-id="${x.exId}">${thumb(ex)}</button>
       <div class="ex-t"><b>${esc(ex.name)}</b><small>${esc(ex.group)}${ex.bw ? ` · ${Math.round(ex.bw * 100)}% peso corporal` : ''}${x.target ? ` · objetivo ${esc(x.target)} ${k === 't' ? 's' : 'reps'}` : ''}</small></div>
       <button class="round sm" data-a="exMenu" data-i="${i}" aria-label="Opciones">${ic('more', 18)}</button></div>
+    ${x.note ? `<p class="xnote">${ic('note', 16)}<span>${esc(x.note)}</span></p>` : ''}
     <label class="rest">${ic('timer', 18)} Descanso <input inputmode="numeric" data-f="rest" data-i="${i}" value="${x.rest}"> s</label>
     ${suggestionBox(x, i)}
     <div class="sets${k === 'w' ? '' : ' nw'}"><div class="srow h"><span>Serie</span><span>Anterior</span>${k === 'w' ? `<span>${ex.bw ? '+kg' : 'kg'}</span>` : ''}<span>${k === 't' ? 'Seg' : 'Reps'}</span><span></span></div>${rows}</div>
@@ -755,8 +827,204 @@ function cardioCard(x, i) {
     <div class="ex-head"><button class="thumbbtn" data-a="viewEx" data-id="${x.exId}">${thumb(ex)}</button>
       <div class="ex-t"><b>${esc(ex.name)}</b><small>Cardio · ${tm ? 'velocidad e inclinación' : 'intensidad'} por tramo</small></div>
       <button class="round sm" data-a="exMenu" data-i="${i}" aria-label="Opciones">${ic('more', 18)}</button></div>
+    ${x.note ? `<p class="xnote">${ic('note', 16)}<span>${esc(x.note)}</span></p>` : ''}
     <div class="sets"><div class="srow cr h${tm ? ' tm' : ''}"><span>Tramo</span><span>Min</span>${tm ? '<span>km/h</span><span>Incl. %</span>' : '<span>Intensidad</span>'}<span></span></div>${rows}</div>
     <button class="btn sm ghost" data-a="addSet" data-i="${i}">${ic('plus', 16)} Tramo</button>
+  </div>`;
+}
+
+// ---------- Modo concentración: una serie cada vez, con la foto del ejercicio ----------
+function firstPending() {
+  const L = db.active.exercises;
+  for (let i = 0; i < L.length; i++) for (let j = 0; j < L[i].sets.length; j++) if (!L[i].sets[j].done) return { i, j };
+  return null;
+}
+// Siguiente serie pendiente después de (i, j); si no hay, la primera que quedó sin hacer
+function nextPending(i, j) {
+  const L = db.active.exercises;
+  for (let a = i; a < L.length; a++) for (let b = a === i ? j + 1 : 0; b < L[a].sets.length; b++) if (!L[a].sets[b].done) return { i: a, j: b };
+  const f = firstPending();
+  return f && !(f.i === i && f.j === j) ? f : null;
+}
+function focusPos() {
+  const w = db.active, p = w.fpos;
+  return p && w.exercises[p.i] && w.exercises[p.i].sets[p.j] ? p : firstPending();
+}
+const stepper = (f, i, j, label, s, ph, extra = '') => `<div class="stepper"><small>${label}${extra}</small><div class="stp">
+    <button class="round" data-a="step" data-i="${i}" data-j="${j}" data-id="${f}" data-d="-1" aria-label="Menos">${ic('minus')}</button>
+    <input inputmode="${f === 'w' ? 'decimal' : 'numeric'}" data-f="${f}" data-i="${i}" data-j="${j}" value="${esc(s[f])}" placeholder="${esc(ph)}">
+    <button class="round" data-a="step" data-i="${i}" data-j="${j}" data-id="${f}" data-d="1" aria-label="Más">${ic('plus')}</button></div></div>`;
+function vFocus() {
+  const w = db.active, pos = focusPos();
+  const head = `<header class="top"><button class="round" data-a="focusOff" aria-label="Ver lista">${ic('list')}</button>
+      <div class="wk-t"><b class="fwk">${esc(w.name)}</b><span id="elapsed">${fmt((Date.now() - w.start) / 1000)}</span></div>
+      <button class="round" data-a="wkMenu" aria-label="Opciones">${ic('more')}</button></header>`;
+  const finishBtn = `<button class="btn primary block" data-a="finish">${ic('check', 20)} Terminar entrenamiento</button>`;
+  if (!w.exercises.length) return head + `<p class="muted center" style="margin:40px 0">Añade tu primer ejercicio</p><button class="btn block" data-a="addEx">${ic('plus', 20)} Añadir ejercicio</button>`;
+  if (!pos) return head + `<div class="card fdone">${ic('trophy', 44)}<h2>¡Todo hecho!</h2><p class="muted">Has completado todas las series.</p></div>
+    <button class="btn block" data-a="addEx">${ic('plus', 20)} Añadir ejercicio</button>${finishBtn}`;
+  const { i, j } = pos, x = w.exercises[i], ex = exInfo(x), k = ex.kind, n = w.exercises.length;
+  const bar = `<div class="fbar"><button class="round sm" data-a="focusEx" data-j="-1" aria-label="Ejercicio anterior"${i ? '' : ' disabled'}>${ic('chevL', 18)}</button>
+    <span>Ejercicio ${i + 1} de ${n}</span><button class="round sm" data-a="focusEx" data-j="1" aria-label="Ejercicio siguiente"${i < n - 1 ? '' : ' disabled'}>${ic('chevR', 18)}</button></div>`;
+  if (k === 'c') return head + bar + cardioCard(x, i) + finishBtn;
+  const s = x.sets[j], p = prevFor(x, j), pl = planned(x, j), sg = isWork(s) ? suggestion(x) : null;
+  const same = x.sets.filter(z => isWork(z) === isWork(s)).length, nth = x.sets.slice(0, j).filter(z => isWork(z) === isWork(s)).length + 1;
+  const dots = x.sets.map((z, m) => `<button class="fdot${z.done ? ' on' : ''}${m === j ? ' cur' : ''}${z.t === 'w' ? ' wu' : ''}" data-a="focusGo" data-i="${i}" data-j="${m}" aria-label="Serie ${m + 1}">${z.t ? SET_TYPES[z.t][1] : x.sets.slice(0, m).filter(isWork).length + 1}</button>`).join('');
+  const kind = isWork(s) ? (s.t ? `Serie ${nth} de ${same} · ${SET_TYPES[s.t][0].toLowerCase()}` : `Serie ${nth} de ${same}`) : `Aproximación ${nth} de ${same}`;
+  const tgt = tgtR(x, s);
+  const nx = nextPending(i, j), y = nx && w.exercises[nx.i], e2 = y && exInfo(y);
+  const next = nx ? `<button class="w wide fnext" data-a="focusGo" data-i="${nx.i}" data-j="${nx.j}">${thumb(e2)}<div><small class="muted">Después</small><b>${esc(e2.name)}</b>
+      <small class="muted">${cap(setLabel(y, nx.j))}${plannedText(e2, planned(y, nx.j)) ? ' · ' + plannedText(e2, planned(y, nx.j)) : ''}</small></div>${ic('chevR', 18)}</button>` : '';
+  // foto grande con las flechas para pasar de ejercicio encima
+  const arrows = `<span class="fcount">${i + 1} / ${n}</span>
+    <button class="round sm fprev" data-a="focusEx" data-j="-1" aria-label="Ejercicio anterior"${i ? '' : ' disabled'}>${ic('chevL', 18)}</button>
+    <button class="round sm fnx" data-a="focusEx" data-j="1" aria-label="Ejercicio siguiente"${i < n - 1 ? '' : ' disabled'}>${ic('chevR', 18)}</button>`;
+  const img = ex.img ? `<div class="fimg${fImgN ? ' alt' : ''}" data-a="viewEx" data-id="${x.exId}"><img src="${imgUrl(ex.img, 0)}" alt="" crossorigin="anonymous"><img class="b" src="${imgUrl(ex.img, 1)}" alt="" crossorigin="anonymous">${arrows}</div>`
+    : `<div class="fimg none">${ic('dumbbell', 44)}<small>Sin foto · añádela en Rutinas → Ejercicios</small>${arrows}</div>`;
+  return head + `<div class="card focus">${img}
+    <div class="ex-head"><div class="ex-t"><b class="fname">${esc(ex.name)}</b><small>${esc(ex.group)}${ex.bw ? ` · ${Math.round(ex.bw * 100)}% peso corporal` : ''}</small></div>
+      <button class="round sm" data-a="exMenu" data-i="${i}" aria-label="Opciones">${ic('more', 18)}</button></div>
+    ${x.note ? `<p class="xnote">${ic('note', 16)}<span>${esc(x.note)}</span></p>` : ''}
+    <div class="fdots">${dots}</div>
+    <div class="fset${s.t === 'w' ? ' wu' : ''}"><b>${kind}</b><small>Anterior: ${p ? setText(k, p, ex) + setTag(p) : '—'}${tgt ? ` · objetivo ${esc(tgt)} ${k === 't' ? 's' : 'reps'}` : ''}</small></div>
+    <div class="steps${k === 'w' ? '' : ' one'}">
+      ${k === 'w' ? stepper('w', i, j, ex.bw ? 'Lastre kg' : 'Peso kg', s, pl.w, `<button class="link" data-a="wStep" aria-label="Cambiar el salto de peso">±${fdec(db.settings.wStep || 2.5)}</button>`) : ''}
+      ${stepper('r', i, j, k === 't' ? 'Segundos' : 'Repeticiones', s, pl.r)}
+    </div>
+    <button class="btn ${s.done ? '' : 'primary'} block fdo" data-a="toggle" data-i="${i}" data-j="${j}">${ic('check', 22)} ${s.done ? 'Hecha · tocar para desmarcar' : 'Serie hecha'}</button>
+    <div class="fquick"><button class="btn sm" data-a="fillLast" data-i="${i}">${ic('refresh', 16)} Como la última vez</button>
+      ${sg && sg.r != null ? `<button class="btn sm" data-a="sugApply" data-i="${i}">${ic('chart', 16)} Sugerencia</button>` : ''}</div>
+    ${sg ? `<p class="fsug">${ic('chart', 16)}<span><b>${esc(sg.text)}</b> · ${esc(sg.why)}</span></p>` : ''}
+  </div>${next}${finishBtn}`;
+}
+// Las dos fotos del ejercicio se alternan: posición inicial y final del movimiento
+setInterval(() => { const el = $('.fimg:not(.none)'); fImgN = 1 - fImgN; if (el) el.classList.toggle('alt', !!fImgN); }, 1100);
+
+// ---------- Series de aproximación ----------
+// Qué dicen los estudios (fuerza e hipertrofia en gente entrenada):
+//  - Enes, Korakakis, Schoenfeld et al. 2025: con cargas de ~10RM, 1-2 series de aproximación (55 % y 75 % × 3-4)
+//    rinden igual que no hacerlas: no restan, pero tampoco suman mucho.
+//  - Ribeiro 2014 / estudio 2024 (1 serie al 40, 60 u 80 % del 10RM): la aproximación pesada y con pocas
+//    repeticiones (80 % × 5) dio más volumen total que las ligeras con muchas repeticiones.
+//  - Los trabajos que encuentran mejora usan 1-2 series, al menos una pesada (80-90 %).
+// Conclusión que aplica la app: calentamiento general corto + 1-2 aproximaciones con pocas repeticiones
+// (≈50 % × 6 y ≈80 % × 3), sin cansarte, y solo en el primer ejercicio de cada músculo; en los siguientes
+// basta 1 (≈70 % × 4). Con cargas ligeras no se añaden. Luego, la primera serie efectiva ya es la buena.
+function warmupPlan(x, exs, k) {
+  const ex = exInfo(x), first = x.sets.find(isWork);
+  if (ex.kind !== 'w') return { sets: [], why: 'Solo se calculan para ejercicios con peso.' };
+  if (!first) return { sets: [], why: 'No hay series de trabajo.' };
+  const sg = suggestion(x), prevW = lastSets(x.exId).filter(isWork).map(s => +s.w || 0);
+  const W = num(first.w || first.tw) || (sg && sg.w) || (prevW.length ? Math.max(...prevW) : 0);
+  const body = ex.bw ? (bodyWeight() || 0) * ex.bw : 0;
+  if (!W) return { sets: [], why: 'Escribe primero el peso de tu primera serie y las calculo a partir de él.' };
+  if (ex.bw ? W < 5 : W < 20) return { sets: [], why: 'Con cargas tan ligeras no hacen falta: la primera serie ya sirve de calentamiento.' };
+  const mus = musOf(ex).p, warmed = exs.slice(0, k).some(y => { const e = exInfo(y); return e.kind !== 'c' && musOf(e).p.some(m => mus.includes(m)); });
+  const steps = warmed ? [[0.7, 4]] : [[0.5, 6], [0.8, 3]];
+  const out = [];
+  steps.forEach(([pct, reps]) => {
+    // con lastre: el % se calcula sobre el peso total (tu cuerpo + lastre); si sale por debajo de tu peso, va sin lastre
+    let w = ex.bw ? Math.max(0, round25((body + W) * pct - body)) : round25(W * pct);
+    if (w >= W) w = Math.max(0, round25(W * 0.5));
+    if (out.length && +out[out.length - 1].tw === w) return;
+    out.push({ t: 'w', tw: String(w), tr: String(ex.bw && !w ? Math.min(reps, 5) : reps), auto: true });
+  });
+  return { sets: out, why: '' };
+}
+// Añade las aproximaciones delante de la primera serie de trabajo (si aún no tiene)
+function addWarmups(exs, k) {
+  const x = exs[k];
+  if (x.sets.some(s => s.t === 'w')) return { n: 0, why: 'Este ejercicio ya tiene series de aproximación.' };
+  const { sets, why } = warmupPlan(x, exs, k);
+  x.sets.splice(Math.max(0, x.sets.findIndex(isWork)), 0, ...sets.map(o => newSet(o)));
+  return { n: sets.length, why };
+}
+
+// Rellena las series pendientes con lo que hiciste la última vez
+function fillLast(i) {
+  const x = db.active.exercises[i], prev = lastSets(x.exId), kind = exInfo(x).kind;
+  let n = 0;
+  x.sets.forEach((s, j) => {
+    const p = !s.done && prevFor(x, j, prev);
+    if (!p) return;
+    if (kind === 'w') s.w = String(p.w);
+    s.r = String(p.r);
+    ['v', 'g', 'l'].forEach(f => { if (p[f] != null) s[f] = String(p[f]); });
+    n++;
+  });
+  return n;
+}
+
+// ---------- Cambiar un ejercicio por otro parecido ----------
+// Misma familia (p. ej. dominadas ↔ dominadas lastradas) primero; luego los que comparten músculos principales
+function alternatives(ex) {
+  const fam = famOf(ex), m = musOf(ex), cardio = ex.kind === 'c';
+  return db.exercises.filter(e => e.id !== ex.id && (e.kind === 'c') === cardio && !['Calentamiento', 'Estiramientos'].includes(e.group)).map(e => {
+    const mm = musOf(e);
+    const sc = (famOf(e) === fam ? 100 : 0) + mm.p.filter(q => m.p.includes(q)).length * 10
+      + mm.s.filter(q => m.p.includes(q) || m.s.includes(q)).length * 2 + (e.group === ex.group ? 3 : 0) + (cardio ? 10 : 0);
+    return [sc, e];
+  }).filter(([sc]) => sc >= 10).sort((a, b) => b[0] - a[0] || a[1].name.localeCompare(b[1].name, 'es')).slice(0, 20).map(([, e]) => e);
+}
+function openSwap(i) {
+  const x = db.active.exercises[i], ex = exInfo(x), alts = alternatives(ex);
+  showModal(`<div class="ex-head"><div class="ex-t"><b>Cambiar «${esc(ex.name)}»</b><small>Por uno que trabaja lo mismo</small></div><button class="round sm" data-a="closeModal" aria-label="Cerrar">${ic('x', 18)}</button></div>
+    ${alts.map(e => `<button class="li ili" data-a="swapPick" data-i="${i}" data-id="${e.id}">${thumb(e)}<span>${esc(e.name)}<small>${esc(e.group)} · ${KINDS[e.kind]}</small></span>${ic('swap', 18)}</button>`).join('') || '<p class="muted">No he encontrado ejercicios parecidos.</p>'}
+    <button class="btn block" data-a="swapSearch" data-i="${i}">${ic('plus', 20)} Buscar otro ejercicio</button>`);
+}
+function doSwap(i, id) {
+  const list = db.active.exercises, x = list[i], ne = exById(id);
+  const done = x.sets.filter(s => s.done), pend = x.sets.filter(s => !s.done && !s.auto);
+  // el peso no se pasa de un ejercicio a otro; se conservan el tipo de serie y las repeticiones objetivo
+  const nx = { exId: id, rest: x.rest, target: x.target, note: '', sets: (pend.length ? pend : [newSet()]).map(s => newSet({ t: s.t, tr: s.tr || '' })) };
+  if (done.length) { x.sets = done; list.splice(i + 1, 0, nx); } else list[i] = nx;
+  if (db.active.focus) db.active.fpos = { i: done.length ? i + 1 : i, j: 0 };
+  save(); render(); toast(`Cambiado por ${ne.name}`);
+}
+
+// ---------- Editor de rutinas ----------
+// Cada ejercicio lleva un plan serie a serie: [{ t: tipo, r: reps objetivo, w: kg (opcional) }].
+// Las rutinas antiguas (series + reps iguales para todas) se convierten al abrirlas.
+const planOf = it => it.plan || Array.from({ length: Math.max(1, it.sets || 1) }, () => ({ t: '', r: it.reps || '', w: '' }));
+function defPlan(ex) {
+  const r = ex.kind === 't' ? '30' : ex.kind === 'c' ? '20' : '10';
+  return Array.from({ length: ex.kind === 'c' ? 1 : 3 }, () => ({ t: '', r, w: '' }));
+}
+// Resumen de repeticiones de las series de trabajo: "10", "8-12" o "6-10" si cambian de una serie a otra
+function repsSummary(plan) {
+  const rs = plan.filter(p => p.t !== 'w' && p.r).map(p => p.r);
+  if (!rs.length) return '';
+  if (rs.every(r => r === rs[0])) return rs[0];
+  const ns = rs.flatMap(r => String(r).match(/\d+/g) || []).map(Number);
+  return ns.length ? `${Math.min(...ns)}-${Math.max(...ns)}` : rs[0];
+}
+function normItem(it) {
+  it.plan = planOf(it).map(p => ({ t: p.t || '', r: String(p.r || '').trim(), w: String(p.w || '').trim() }));
+  it.sets = it.plan.length;
+  it.reps = repsSummary(it.plan);
+  it.note = (it.note || '').trim();
+  return it;
+}
+function rItemCard(it, i) {
+  const ex = exInfo(it), open = rOpened.has(it), plan = it.plan, unit = ex.kind === 't' ? 'Seg' : ex.kind === 'c' ? 'Min' : 'Reps';
+  const warmN = plan.filter(p => p.t === 'w').length, work = plan.length - warmN;
+  const sum = `${work} ${work === 1 ? 'serie' : 'series'}${repsSummary(plan) ? ` × ${esc(repsSummary(plan))}` : ''}${warmN ? ` · ${warmN} aprox.` : ''} · ${it.rest} s${it.note ? ' · nota' : ''}`;
+  const rows = plan.map((p, j) => `<div class="prow${p.t === 'w' ? ' wu' : ''}${ex.kind === 'w' ? '' : ' nw'}">
+      <button class="ptype t${p.t || 'n'}" data-a="rpType" data-i="${i}" data-j="${j}">${p.t ? SET_TYPES[p.t][1] : plan.slice(0, j).filter(q => q.t !== 'w').length + 1}</button>
+      <input data-f="rpR" data-i="${i}" data-j="${j}" value="${esc(p.r)}" placeholder="${ex.kind === 't' ? '30' : ex.kind === 'c' ? '20' : '8-12'}" inputmode="${ex.kind === 'c' ? 'decimal' : 'text'}">
+      ${ex.kind === 'w' ? `<input data-f="rpW" data-i="${i}" data-j="${j}" value="${esc(p.w)}" placeholder="auto" inputmode="decimal">` : ''}
+      <button class="round sm ghost" data-a="rpDel" data-i="${i}" data-j="${j}" aria-label="Quitar serie"${plan.length > 1 ? '' : ' disabled'}>${ic('x', 16)}</button></div>`).join('');
+  return `<div class="card ritem${open ? ' open' : ''}">
+    <div class="ex-head"><span class="grip" data-drag="${i}" aria-label="Arrastra para ordenar">${ic('grip', 20)}</span>${thumb(ex)}
+      <button class="ex-t rtog" data-a="rToggle" data-i="${i}"><b>${esc(ex.name)}</b><small>${sum}</small></button>
+      <button class="round sm" data-a="rToggle" data-i="${i}" aria-label="${open ? 'Plegar' : 'Desplegar'}">${ic(open ? 'up' : 'down', 18)}</button></div>
+    ${open ? `<div class="plan"><div class="prow h${ex.kind === 'w' ? '' : ' nw'}"><span>Serie</span><span>${unit}</span>${ex.kind === 'w' ? `<span>${ex.bw ? '+kg' : 'Kg'}</span>` : ''}<span></span></div>${rows}</div>
+      <button class="btn sm ghost" data-a="rpAdd" data-i="${i}">${ic('plus', 16)} Serie</button>
+      <p class="muted small">Toca el número para cambiar el tipo (aproximación, al fallo, drop set). Si dejas los kg en «auto», se usan los de la última vez o la sugerencia.</p>
+      <div class="row"><label class="field">Descanso (s)<input inputmode="numeric" data-f="rRest" data-i="${i}" value="${it.rest}"></label>
+        ${ex.kind === 'w' ? `<label class="field chkf"><span>Aproximación automática</span><input type="checkbox" class="switch" data-f="rWarm" data-i="${i}"${it.warm !== false ? ' checked' : ''}></label>` : ''}</div>
+      <label class="field">Nota<input data-f="rNote" data-i="${i}" value="${esc(it.note || '')}" placeholder="Ej. agarre neutro, banco en posición 3..." maxlength="120"></label>
+      <button class="btn sm ghost danger" data-a="rDel" data-i="${i}">${ic('trash', 16)} Quitar ejercicio</button>` : ''}
   </div>`;
 }
 
@@ -766,25 +1034,17 @@ function vRoutines() {
         <div class="wk-t"><b>${draft.id ? 'Editar rutina' : 'Nueva rutina'}</b></div>
         ${draft.id ? `<button class="round danger" data-a="rDelete" aria-label="Eliminar">${ic('trash')}</button>` : '<span style="width:46px"></span>'}</header>
       <label class="field">Nombre<input data-f="rName" value="${esc(draft.name)}" placeholder="Ej. Pierna, Torso A, Push..."></label>
-      ${draft.items.map((it, i) => {
-        const ex = exInfo(it);
-        return `<div class="card">
-          <div class="ex-head">${thumb(ex)}<div class="ex-t"><b>${esc(ex.name)}</b><small>${esc(ex.group)}</small></div>
-            <button class="round sm" data-a="rMove" data-i="${i}" data-j="-1" aria-label="Subir">${ic('up', 18)}</button>
-            <button class="round sm" data-a="rMove" data-i="${i}" data-j="1" aria-label="Bajar">${ic('down', 18)}</button>
-            <button class="round sm danger" data-a="rDel" data-i="${i}" aria-label="Quitar">${ic('x', 18)}</button></div>
-          <div class="row">
-            <label class="field">Series<input inputmode="numeric" data-f="rSets" data-i="${i}" value="${it.sets}"></label>
-            <label class="field">${ex.kind === 't' ? 'Segundos' : ex.kind === 'c' ? 'Minutos' : 'Reps'}<input data-f="rReps" data-i="${i}" value="${esc(it.reps)}" placeholder="8-12"></label>
-            <label class="field">Descanso (s)<input inputmode="numeric" data-f="rRest" data-i="${i}" value="${it.rest}"></label>
-          </div></div>`;
-      }).join('')}
-      <button class="btn block" data-a="rAddEx">${ic('plus', 20)} Añadir ejercicio</button>
-      <button class="btn primary block" data-a="rSave">Guardar rutina</button>`;
+      <div class="field">Días de la semana <span class="muted small">(opcional)</span><div class="days">${DAYS.map((d, k) =>
+        `<button class="${draft.days.includes(k) ? 'on' : ''}" data-a="rDay" data-i="${k}" aria-label="${DAY_NAMES[k]}">${d}</button>`).join('')}</div></div>
+      ${draft.items.length > 1 ? `<p class="muted small">${ic('grip', 14)} Mantén y arrastra para cambiar el orden.</p>` : ''}
+      <div id="ritems">${draft.items.map(rItemCard).join('')}</div>
+      <button class="btn block" data-a="rAddEx">${ic('plus', 20)} Añadir ejercicios</button>
+      <button class="btn primary block" data-a="rSave">Guardar rutina</button>
+      ${draft.id ? `<button class="btn block ghost" data-a="rDup">${ic('copy', 20)} Duplicar rutina</button>` : ''}`;
   }
   const seg = `<div class="seg"><button class="${routTab === 'routines' ? 'on' : ''}" data-a="routTab" data-id="routines">${ic('dumbbell', 18)} Rutinas</button><button class="${routTab === 'exercises' ? 'on' : ''}" data-a="routTab" data-id="exercises">${ic('book', 18)} Ejercicios</button></div>`;
   if (routTab === 'exercises') return header('Ejercicios', `<button class="round" data-a="catAdd" aria-label="Catálogo">${ic('book')}</button>`) + seg + vExercises();
-  return header('Rutinas', `<button class="round" data-a="newRoutine" aria-label="Nueva rutina">${ic('plus')}</button>`) + seg
+  return header('Rutinas', `<button class="round" data-a="newRoutine" aria-label="Nueva rutina">${ic('plus')}</button>`) + seg + weekStrip()
     + (db.routines.map(r => routineCard(r, true)).join('') || '<p class="muted center" style="margin:40px 0">Todavía no hay rutinas.<br>Crea una con el botón +</p>');
 }
 
@@ -807,6 +1067,12 @@ function grouped(list, rowFn) {
     g[k].sort((a, b) => a.name.localeCompare(b.name, 'es')).map(rowFn).join('')).join('');
 }
 const exRow = action => e => `<button class="li ili" data-a="${action}" data-id="${e.id}">${thumb(e)}<span>${esc(e.name)}<small>${KINDS[e.kind]}</small></span>${ic('chevR', 18)}</button>`;
+// Fila del buscador: en selección múltiple muestra el orden en que los has marcado
+const pickRow = e => {
+  if (!pickSel) return exRow('pick')(e);
+  const k = pickSel.indexOf(e.id);
+  return `<button class="li ili${k >= 0 ? ' sel' : ''}" data-a="pick" data-id="${e.id}">${thumb(e)}<span>${esc(e.name)}<small>${KINDS[e.kind]}</small></span><i class="pchk">${k >= 0 ? k + 1 : ''}</i></button>`;
+};
 
 function exList() {
   return grouped(filterEx(exQuery), exRow('exEdit')) || '<p class="muted">Sin resultados.</p>';
@@ -1123,7 +1389,7 @@ const uiPrompt = (text, value = '', type) => uiDialog({ text, input: { value, ty
 
 // ---------- Modal ----------
 function showModal(html) { $('#sheet').innerHTML = html; $('#modal').hidden = false; }
-function closeModal() { $('#modal').hidden = true; $('#sheet').innerHTML = ''; pickCb = null; catMode = null; clearInterval(viewerTimer); }
+function closeModal() { $('#modal').hidden = true; $('#sheet').innerHTML = ''; pickCb = null; pickSel = null; catMode = null; clearInterval(viewerTimer); }
 $('#modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
 
 function openSheet(title, opts) {
@@ -1136,12 +1402,23 @@ function openSheet(title, opts) {
 function pickList(q) {
   const list = filterEx(q);
   const more = `<button class="btn block" data-a="catFromPick">${ic('book', 20)} Buscar en el catálogo con fotos (+800)</button>`;
-  if (list.length) return grouped(list, exRow('pick')) + more;
+  if (list.length) return grouped(list, pickRow) + more;
   return `<p class="muted">Sin resultados.</p>${q.trim() ? `<button class="btn block" data-a="pickNew">${ic('plus', 20)} Crear «${esc(q.trim())}»</button>` : ''}${more}`;
 }
-function openPicker(cb) {
-  showModal(`<div class="mhead"><input id="pickQ" data-f="pickQ" placeholder="Buscar ejercicio..." autocomplete="off"><button class="round sm" data-a="closeModal" aria-label="Cerrar">${ic('x', 18)}</button></div><div id="pickList">${pickList('')}</div>`);
+// cb(id, n, total) se llama una vez por ejercicio elegido. multi = marcar varios y añadirlos juntos
+function openPicker(cb, multi) {
+  pickSel = multi ? [] : null;
+  showModal(`<div class="mhead"><input id="pickQ" data-f="pickQ" placeholder="Buscar ejercicio..." autocomplete="off"><button class="round sm" data-a="closeModal" aria-label="Cerrar">${ic('x', 18)}</button></div>
+    ${multi ? '<p class="muted small" style="margin:0 0 4px">Marca todos los que quieras; se añaden en ese orden.</p>' : ''}
+    <div id="pickList">${pickList('')}</div>
+    ${multi ? '<div class="pickbar"><button class="btn primary block" id="pickDone" data-a="pickDone" disabled>Marca ejercicios</button></div>' : ''}`);
   pickCb = cb;
+}
+function pickRefresh() {
+  $('#pickList').innerHTML = pickList(($('#pickQ') || {}).value || '');
+  const b = $('#pickDone'), n = pickSel.length;
+  b.disabled = !n;
+  b.textContent = n ? `Añadir ${n} ${n === 1 ? 'ejercicio' : 'ejercicios'}` : 'Marca ejercicios';
 }
 
 // Editor de músculos de un ejercicio: cada músculo puede ser principal, secundario o nada
@@ -1204,12 +1481,12 @@ function startWorkout(name, exercises, routineId) {
   save(); view = 'workout'; render(); scrollTo(0, 0); keepAwake();
 }
 
+// Texto del temporizador: qué viene después, con el peso y las repeticiones previstas
 function nextLabel(i, j) {
-  const w = db.active, x = w.exercises[i];
-  const k = x.sets.findIndex((s, n) => n > j && !s.done);
-  if (k >= 0) return `${exInfo(x).name} · serie ${k + 1}`;
-  const nx = w.exercises.slice(i + 1).find(e => e.sets.some(s => !s.done));
-  return nx ? exInfo(nx).name : 'último ejercicio completado';
+  const nx = nextPending(i, j);
+  if (!nx) return 'último ejercicio completado';
+  const y = db.active.exercises[nx.i], e = exInfo(y), pt = plannedText(e, planned(y, nx.j));
+  return `${e.name} · ${setLabel(y, nx.j)}${pt ? ' · ' + pt : ''}`;
 }
 
 function moveItem(arr, i, d) {
@@ -1439,7 +1716,14 @@ const A = {
   routTab(b, i, j, id) { routTab = id; render(); },
   closeModal,
   sheet(b, i) { const f = sheetOpts[i][1]; closeModal(); f(); },
-  pick(b, i, j, id) { const cb = pickCb; closeModal(); if (cb) cb(id); },
+  pick(b, i, j, id) {
+    if (pickSel) { const k = pickSel.indexOf(id); k >= 0 ? pickSel.splice(k, 1) : pickSel.push(id); return pickRefresh(); }
+    const cb = pickCb; closeModal(); if (cb) cb(id, 0, 1);
+  },
+  pickDone() {
+    const ids = pickSel.slice(), cb = pickCb;
+    closeModal(); ids.forEach((id, n) => cb(id, n, ids.length));
+  },
   async pickNew() {
     const name = $('#pickQ').value.trim();
     const kind = (await uiDialog({ text: `¿«${name}» usa peso (pesas, discos, máquina...)?`, ok: 'Sí, con peso', cancel: 'No, solo reps' })) ? 'w' : 'r';
@@ -1468,18 +1752,23 @@ const A = {
   startEmpty() { startWorkout('Entrenamiento libre', []); },
   startRoutine(b, i, j, id) {
     const r = db.routines.find(r => r.id === id);
-    startWorkout(r.name, r.items.map(it => ({
-      exId: it.exId, rest: it.rest, target: it.reps,
-      sets: Array.from({ length: Math.max(1, it.sets) }, () => ({ w: '', r: '', v: '', g: '', l: '1', done: false })),
-    })), r.id);
+    const exs = r.items.map(it => ({
+      exId: it.exId, rest: it.rest, target: it.reps || '', note: it.note || '',
+      sets: planOf(it).map(p => newSet({ ...(p.t ? { t: p.t } : {}), tr: p.r || '', tw: p.w || '' })),
+    }));
+    // series de aproximación automáticas (se pueden desactivar por ejercicio en la rutina)
+    exs.forEach((x, k) => { if (r.items[k].warm !== false) addWarmups(exs, k); });
+    startWorkout(r.name, exs, r.id);
   },
   addEx() {
-    openPicker(id => {
+    openPicker((id, n, total) => {
       const ex = exById(id);
-      db.active.exercises.push({ exId: id, rest: defRest(ex), target: '', sets: [{ w: '', r: '', v: '', g: '', l: '1', done: false }] });
+      db.active.exercises.push({ exId: id, rest: defRest(ex), target: '', sets: [newSet()] });
+      if (db.active.focus && n === 0) db.active.fpos = { i: db.active.exercises.length - 1, j: 0 };
+      if (n < total - 1) return;
       save(); render();
-      scrollTo(0, document.body.scrollHeight);
-    });
+      if (!db.active.focus) scrollTo(0, document.body.scrollHeight);
+    }, true);
   },
   addSet(b, i) {
     const x = db.active.exercises[i], last = x.sets[x.sets.length - 1];
@@ -1537,31 +1826,77 @@ const A = {
     s.done = !s.done;
     if (s.done) {
       // Si dejas los campos vacíos, usa los valores sugeridos (anterior / objetivo)
-      const p = lastSets(x.exId)[j];
-      if (s.w === '' && p) s.w = String(p.w);
-      if (s.r === '') s.r = String(parseInt(x.target) || (p && p.r) || '');
+      const p = prevFor(x, j);
+      if (s.w === '') s.w = s.tw || (p ? String(p.w) : '');
+      if (s.r === '') s.r = String(parseInt(tgtR(x, s)) || (p && p.r) || '');
       if (s.v === '' && p && p.v != null) s.v = String(p.v);
       if (s.g === '' && p && p.g != null) s.g = String(p.g);
       s.pr = checkPR(i, j);
       if (s.pr) toast(`Nuevo récord · ${exInfo(x).name}: ${s.pr}`);
-      if (x.rest > 0) startTimer(x.rest, nextLabel(i, j));
+      // tras una aproximación basta un descanso corto (máx. 1 min): no cansa
+      const rest = s.t === 'w' ? Math.min(60, x.rest) : x.rest;
+      if (rest > 0) startTimer(rest, nextLabel(i, j));
+      if (db.active.focus) db.active.fpos = nextPending(i, j);
     } else s.pr = null;
     save(); render();
+    if (db.active.focus) scrollTo(0, 0);
   },
   exMenu(b, i) {
-    const list = db.active.exercises;
-    openSheet(exInfo(list[i]).name, [
-      ['Subir', () => { moveItem(list, i, -1); save(); render(); }],
-      ['Bajar', () => { moveItem(list, i, 1); save(); render(); }],
-      ['Eliminar ejercicio', async () => { if (await uiConfirm('¿Quitar este ejercicio del entreno?', 'Quitar', true)) { list.splice(i, 1); save(); render(); } }, 'danger'],
+    const list = db.active.exercises, ex = exInfo(list[i]);
+    openSheet(ex.name, [
+      ['Rellenar con la última vez', () => A.fillLast(null, i)],
+      ...(ex.kind === 'w' ? [['Añadir series de aproximación', () => A.warmAdd(null, i)]] : []),
+      ['Cambiar por otro parecido', () => openSwap(i)],
+      ['Subir', () => { moveItem(list, i, -1); db.active.fpos = null; save(); render(); }],
+      ['Bajar', () => { moveItem(list, i, 1); db.active.fpos = null; save(); render(); }],
+      ['Eliminar ejercicio', async () => { if (await uiConfirm('¿Quitar este ejercicio del entreno?', 'Quitar', true)) { list.splice(i, 1); db.active.fpos = null; save(); render(); } }, 'danger'],
     ]);
   },
   wkMenu() {
     openSheet(db.active.name, [
+      [db.active.focus ? 'Ver como lista' : 'Modo concentración', () => (db.active.focus ? A.focusOff() : A.focusOn())],
+      ['Rellenar todo con la última vez', () => {
+        const n = db.active.exercises.reduce((t, x, i) => t + fillLast(i), 0);
+        save(); render(); toast(n ? `${n} series rellenadas con tu última sesión` : 'No hay datos anteriores de estos ejercicios');
+      }],
+      ['Añadir ejercicios', () => A.addEx()],
       ['Guardar como rutina', () => A.saveAsRoutine()],
       ['Descartar entreno', () => A.discard(), 'danger'],
     ]);
   },
+  // Modo concentración
+  focusOn() { db.active.focus = true; db.active.fpos = null; save(); render(); scrollTo(0, 0); },
+  focusOff() { db.active.focus = false; save(); render(); },
+  focusGo(b, i, j) { db.active.fpos = { i, j }; save(); render(); scrollTo(0, 0); },
+  focusEx(b, i, j) {
+    const p = focusPos() || { i: 0 }, k = Math.max(0, Math.min(db.active.exercises.length - 1, p.i + j)), x = db.active.exercises[k];
+    db.active.fpos = { i: k, j: Math.max(0, x.sets.findIndex(s => !s.done)) };
+    save(); render(); scrollTo(0, 0);
+  },
+  // Botones − / + del peso y las repeticiones
+  step(b, i, j, f) {
+    const x = db.active.exercises[i], s = x.sets[j], kind = exInfo(x).kind;
+    const inc = f === 'w' ? db.settings.wStep || 2.5 : kind === 't' ? 5 : 1;
+    const v = Math.max(0, num(s[f] !== '' ? s[f] : planned(x, j)[f]) + inc * +b.dataset.d);
+    s[f] = String(Math.round(v * 100) / 100);
+    save(); render();
+  },
+  wStep() {
+    const steps = [1.25, 2.5, 5], k = steps.indexOf(db.settings.wStep || 2.5);
+    db.settings.wStep = steps[(k + 1) % steps.length]; save(); render();
+  },
+  fillLast(b, i) {
+    const n = fillLast(i);
+    save(); render(); toast(n ? `${n} ${n === 1 ? 'serie rellenada' : 'series rellenadas'} como la última vez` : 'Todavía no hay una sesión anterior de este ejercicio');
+  },
+  warmAdd(b, i) {
+    const { n, why } = addWarmups(db.active.exercises, i);
+    if (!n) return uiAlert(why);
+    if (db.active.focus) db.active.fpos = { i, j: db.active.exercises[i].sets.findIndex(s => s.t === 'w' && !s.done) };
+    save(); render(); toast(`${n} ${n === 1 ? 'serie' : 'series'} de aproximación añadidas`);
+  },
+  swapPick(b, i, j, id) { closeModal(); doSwap(i, id); },
+  swapSearch(b, i) { openPicker(id => doSwap(i, id)); },
   async finish() {
     const w = db.active;
     const totals = activeTotals();
@@ -1596,12 +1931,14 @@ const A = {
     const old = db.routines.find(r => r.id === w.routineId);
     const name = await uiPrompt('Nombre de la rutina', w.name);
     if (!name || !name.trim()) return;
-    const items = w.exercises.map(x => ({
-      exId: x.exId, sets: x.sets.length, rest: x.rest,
-      reps: x.target || (x.sets.find(s => s.r !== '') || {}).r || '',
-    }));
+    // las aproximaciones automáticas no se guardan: se recalculan en cada entreno
+    const items = w.exercises.map(x => {
+      const prevIt = old && old.items.find(it => it.exId === x.exId), sets = x.sets.filter(s => !s.auto);
+      return normItem({ exId: x.exId, rest: x.rest, note: x.note || '', ...(prevIt && prevIt.warm === false ? { warm: false } : {}),
+        plan: (sets.length ? sets : x.sets).map(s => ({ t: s.t || '', r: s.tr || (isWork(s) ? x.target : '') || s.r || '', w: s.tw || '' })) });
+    });
     if (old && old.name === name.trim()) old.items = items;
-    else { const r = { id: uid(), name: name.trim(), items }; db.routines.push(r); w.routineId = r.id; }
+    else { const r = { id: uid(), name: name.trim(), items, days: [] }; db.routines.push(r); w.routineId = r.id; }
     w.name = name.trim(); save(); render();
     toast('Rutina guardada');
   },
@@ -1620,19 +1957,52 @@ const A = {
   tSkip() { db.active.timer = null; save(); renderTimer(); },
 
   // Rutinas
-  newRoutine() { draft = { id: null, name: '', items: [] }; render(); },
-  editRoutine(b, i, j, id) { draft = JSON.parse(JSON.stringify(db.routines.find(r => r.id === id))); render(); },
-  rAddEx() { openPicker(id => { const k = exById(id).kind; draft.items.push({ exId: id, sets: k === 'c' ? 1 : 3, reps: k === 't' ? '30' : k === 'c' ? '20' : '10', rest: defRest(exById(id)) }); render(); }); },
-  rMove(b, i, j) { moveItem(draft.items, i, j); render(); },
+  newRoutine() { draft = { id: null, name: '', items: [], days: [] }; rOpened.clear(); render(); scrollTo(0, 0); },
+  editRoutine(b, i, j, id) {
+    draft = JSON.parse(JSON.stringify(db.routines.find(r => r.id === id)));
+    draft.days ||= [];
+    draft.items.forEach(it => { it.plan = planOf(it); });
+    rOpened.clear(); render(); scrollTo(0, 0);
+  },
+  rAddEx() {
+    openPicker((id, n, total) => {
+      const ex = exById(id), it = { exId: id, rest: defRest(ex), note: '', plan: defPlan(ex) };
+      draft.items.push(it);
+      if (total === 1) rOpened.add(it);   // si añades uno solo, se abre para configurarlo
+      if (n === total - 1) render();
+    }, true);
+  },
+  rToggle(b, i) { const it = draft.items[i]; rOpened.has(it) ? rOpened.delete(it) : rOpened.add(it); render(); },
   rDel(b, i) { draft.items.splice(i, 1); render(); },
+  rpAdd(b, i) { const plan = draft.items[i].plan, last = plan[plan.length - 1]; plan.push({ t: last && last.t !== 'w' ? last.t : '', r: last ? last.r : '', w: last ? last.w : '' }); render(); },
+  rpDel(b, i, j) { const plan = draft.items[i].plan; if (plan.length > 1) plan.splice(j, 1); render(); },
+  rpType(b, i, j) {
+    const p = draft.items[i].plan[j];
+    openSheet(`Serie ${j + 1} · tipo`, Object.entries(SET_TYPES).map(([t, [name]]) =>
+      [(p.t || '') === t ? `✓ ${name === 'Calentamiento' ? 'Aproximación (calentamiento)' : name}` : name === 'Calentamiento' ? 'Aproximación (calentamiento)' : name, () => { p.t = t; render(); }]));
+  },
+  rDay(b, i) { const d = draft.days, k = d.indexOf(i); k >= 0 ? d.splice(k, 1) : d.push(i); d.sort(); render(); },
   rCancel() { draft = null; render(); },
-  rSave() {
-    if (!draft.name.trim()) return uiAlert('Ponle un nombre a la rutina.');
-    if (!draft.items.length) return uiAlert('Añade al menos un ejercicio.');
+  rSave(b, i, j, id, e, stay) {
+    if (!draft.name.trim()) { uiAlert('Ponle un nombre a la rutina.'); return false; }
+    if (!draft.items.length) { uiAlert('Añade al menos un ejercicio.'); return false; }
     draft.name = draft.name.trim();
-    if (draft.id) db.routines[db.routines.findIndex(r => r.id === draft.id)] = draft;
-    else { draft.id = uid(); db.routines.push(draft); }
-    draft = null; save(); render();
+    draft.items.forEach(normItem);
+    const r = JSON.parse(JSON.stringify(draft));
+    if (r.id) db.routines[db.routines.findIndex(x => x.id === r.id)] = r;
+    else { r.id = draft.id = uid(); db.routines.push(r); }
+    save();
+    if (stay) return true;
+    draft = null; render(); toast('Rutina guardada');
+  },
+  // Guarda la rutina y abre una copia para editarla
+  async rDup() {
+    const name = await uiPrompt('Nombre de la copia', draft.name.trim() + ' (copia)');
+    if (!name || !name.trim() || !A.rSave(null, 0, 0, null, null, true)) return;
+    const c = JSON.parse(JSON.stringify(draft));
+    c.id = uid(); c.name = name.trim(); c.days = [];
+    db.routines.push(JSON.parse(JSON.stringify(c))); save();
+    draft = c; rOpened.clear(); render(); scrollTo(0, 0); toast('Copia creada: ' + c.name);
   },
   async rDelete() {
     if (!(await uiConfirm('¿Eliminar esta rutina? Tu historial no se borra.', 'Eliminar', true))) return;
@@ -1674,7 +2044,11 @@ const A = {
   // Fotos y catálogo
   viewEx(b, i, j, id) { openViewer(exById(id) || { name: '(eliminado)', group: '', kind: 'w', img: '' }); },
   catAdd() { openCatalog({ type: 'add', cb: null }); },
-  catFromPick() { openCatalog({ type: 'add', cb: pickCb }); },
+  catFromPick() {
+    // en selección múltiple, lo ya marcado se añade junto con el del catálogo
+    const cb = pickCb, sel = pickSel ? pickSel.slice() : [];
+    openCatalog({ type: 'add', cb: cb && (id => { const ids = [...sel, id]; ids.forEach((x, n) => cb(x, n, ids.length)); }) });
+  },
   catImg(b, i, j, id) { openCatalog({ type: 'img', exId: id }); },
   async catPick(b, i, j, id) {
     const c = catalog.find(c => c[0] === id), mode = catMode;
@@ -1788,6 +2162,51 @@ function swEnd() {
 document.addEventListener('pointerup', swEnd);
 document.addEventListener('pointercancel', swEnd);
 
+// ---------- Arrastrar para ordenar los ejercicios del editor de rutinas ----------
+// Se agarra por el asa (⋮⋮). La tarjeta sigue al dedo y las demás se apartan; cerca de los bordes
+// de la pantalla la página se desplaza sola.
+let drag = null;
+document.addEventListener('pointerdown', e => {
+  const g = e.target.closest('[data-drag]');
+  if (!g || !draft) return;
+  e.preventDefault();
+  const card = g.closest('.ritem'), cards = [...document.querySelectorAll('.ritem')];
+  drag = { from: +g.dataset.drag, to: +g.dataset.drag, card, cards, y0: e.clientY, y: e.clientY, s0: scrollY, h: card.offsetHeight + 12,
+    mids: cards.map(c => { const r = c.getBoundingClientRect(); return r.top + scrollY + r.height / 2; }) };
+  card.classList.add('dragging'); document.body.classList.add('is-dragging');
+  try { g.setPointerCapture(e.pointerId); } catch (err) { }
+  drag.auto = setInterval(() => {
+    if (!drag) return;
+    const d = drag.y < 90 ? -12 : drag.y > innerHeight - 160 ? 12 : 0;
+    if (d) { scrollBy(0, d); dragMove(); }
+  }, 16);
+});
+function dragMove() {
+  const dy = drag.y - drag.y0 + scrollY - drag.s0, mid = drag.mids[drag.from] + dy;
+  let to = drag.from;
+  for (let k = 0; k < drag.from; k++) if (mid < drag.mids[k]) { to = k; break; }
+  for (let k = drag.mids.length - 1; k > drag.from; k--) if (mid > drag.mids[k]) { to = k; break; }
+  drag.to = to;
+  drag.card.style.transform = `translateY(${dy}px)`;
+  drag.cards.forEach((c, k) => {
+    if (c === drag.card) return;
+    const sh = drag.from < k && k <= to ? -drag.h : to <= k && k < drag.from ? drag.h : 0;
+    c.style.transform = sh ? `translateY(${sh}px)` : '';
+  });
+}
+document.addEventListener('pointermove', e => { if (drag) { drag.y = e.clientY; dragMove(); } });
+function dragEnd() {
+  if (!drag) return;
+  const { from, to } = drag;
+  clearInterval(drag.auto); drag = null;
+  document.body.classList.remove('is-dragging');
+  if (from !== to) { const [it] = draft.items.splice(from, 1); draft.items.splice(to, 0, it); }
+  swJust = true; setTimeout(() => { swJust = false; }, 60);
+  render();
+}
+document.addEventListener('pointerup', dragEnd);
+document.addEventListener('pointercancel', dragEnd);
+
 document.addEventListener('click', e => {
   if (swJust) { e.preventDefault(); return; }
   const b = e.target.closest('[data-a]');
@@ -1841,11 +2260,13 @@ async function onField(e) {
       return;
     }
     case 'rName': draft.name = v; return;
-    case 'rSets': draft.items[i].sets = Math.max(1, parseInt(v) || 1); return;
-    case 'rReps': draft.items[i].reps = v.trim(); return;
+    case 'rpR': draft.items[i].plan[j].r = v.trim(); return;
+    case 'rpW': draft.items[i].plan[j].w = v.trim().replace(',', '.'); return;
+    case 'rNote': draft.items[i].note = v; return;
+    case 'rWarm': draft.items[i].warm = el.checked; return;
     case 'rRest': draft.items[i].rest = Math.max(0, parseInt(v) || 0); return;
     case 'exQ': exQuery = v; $('#exList').innerHTML = exList(); return;
-    case 'pickQ': $('#pickList').innerHTML = pickList(v); return;
+    case 'pickQ': if (pickSel) pickRefresh(); else $('#pickList').innerHTML = pickList(v); return;
     case 'catQ': case 'catG': $('#catList').innerHTML = catList(); return;
     case 'sRest': db.settings.rest = Math.max(0, parseInt(v) || 0); break;
     case 'sGoal': db.settings.weekGoal = Math.max(1, parseInt(v) || 1); break;

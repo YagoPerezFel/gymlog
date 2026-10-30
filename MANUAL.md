@@ -2,7 +2,7 @@
 
 Guía para entender cómo está hecha la app, qué hace cada archivo y cada función, y cómo modificarla o publicar cambios.
 
-**Versión descrita:** 0.6.1 · Historial de cambios: [CHANGELOG.md](CHANGELOG.md)
+**Versión descrita:** 0.7.0 · Historial de cambios: [CHANGELOG.md](CHANGELOG.md)
 **App publicada:** https://yagoperezfel.github.io/gymlog/
 **Código:** https://github.com/YagoPerezFel/gymlog
 
@@ -886,3 +886,64 @@ Las filas que se pueden borrar van envueltas así:
 - El gesto solo empieza si el movimiento es más horizontal que vertical. Con `touch-action: pan-y` el navegador sigue desplazando la página en vertical.
 - `swJust` evita que soltar el dedo tras deslizar cuente como un toque, y `swClose()` cierra las filas abiertas.
 - Acciones: `swDelSet` (borra la serie del entreno en curso) y `swDelRoutine` (borra la rutina tras confirmar).
+
+---
+
+## 22. Rutinas serie a serie y modo concentración (v0.7)
+
+### 22.1 Formato de las rutinas
+Cada ejercicio de una rutina guarda ahora un **plan serie a serie**:
+```js
+{ exId, rest: 120, note: 'agarre neutro', warm: true,   // warm: aproximación automática (false = desactivada)
+  plan: [{ t: '', r: '6', w: '75' }, { t: '', r: '8', w: '' }, { t: 'f', r: '8', w: '' }],
+  sets: 3, reps: '6-8' }                                  // resumen, para compatibilidad
+```
+- `t` es el tipo: `''` normal, `'w'` aproximación, `'f'` al fallo, `'d'` drop set.
+- `r` son las repeticiones objetivo y `w` los kg (vacío = automático).
+- Las rutinas antiguas (`sets` + `reps`) se convierten al abrirlas con `planOf(it)`. Al guardar, `normItem(it)` recalcula `sets` y `reps`.
+- `routine.days` es la lista de días (0 = lunes … 6 = domingo). `todayCard()` pinta «Hoy toca» en Inicio y `weekStrip()` la tira semanal en Rutinas.
+
+### 22.2 Editor (`rItemCard()` y `vRoutines()`)
+- Las tarjetas se pliegan y despliegan con `rToggle`. Las que están desplegadas se guardan en el `Set` `rOpened`.
+- Acciones del plan:
+  - `rpAdd` y `rpDel`: añadir o quitar una serie;
+  - `rpType`: hoja con los tipos de serie;
+  - `rDay`: marcar o desmarcar un día;
+  - `rDup`: guarda la rutina y abre una copia.
+- **Arrastrar** (escuchadores de `pointerdown`, `pointermove` y `pointerup` sobre el asa `[data-drag]`, que tiene `touch-action: none`):
+  - `dragMove()` mueve la tarjeta con `translateY`, aparta las demás y calcula la posición nueva comparando con el centro de cada tarjeta;
+  - un intervalo desplaza la página cuando el dedo está cerca del borde;
+  - al soltar se reordena `draft.items`.
+
+### 22.3 Buscador con selección múltiple
+Con `openPicker(cb, multi)` y `multi` activado, cada toque marca o desmarca un ejercicio (`pickSel` guarda el orden). El botón «Añadir N ejercicios» llama a `cb(id, n, total)` por cada uno. Lo usan el editor de rutinas y «Añadir ejercicio» del entreno.
+
+### 22.4 Entreno
+- Al empezar una rutina, cada serie lleva su objetivo: `tr` (reps) y `tw` (kg). Se ven como texto gris en las casillas y se usan si marcas la serie sin escribir nada.
+- `prevFor(x, j)` busca la serie equivalente de la última vez dentro de su clase (aproximación o trabajo).
+- `planned(x, j)` da los valores previstos: lo escrito, si no el plan, si no la última vez.
+- `fillLast(i)` copia la última sesión en las series pendientes.
+- `alternatives(ex)` puntúa los ejercicios parecidos: misma familia +100, cada músculo principal en común +10, cada secundario +2, mismo grupo +3.
+- `doSwap()` cambia el ejercicio y deja las series ya hechas en el original.
+- `nextLabel()` usa `nextPending()` y `plannedText()` para el texto del temporizador.
+
+### 22.5 Modo concentración (`vFocus()`)
+- Se activa con `db.active.focus`. La serie que se ve es `db.active.fpos` o, si no hay, la primera pendiente.
+- Las dos fotos del ejercicio están superpuestas y un intervalo alterna la clase `.alt` cada 1,1 s; así la imagen no parpadea.
+- `stepper()` dibuja los botones − / +. `A.step` suma o resta `db.settings.wStep` kg (1,25, 2,5 o 5; se cambia con `A.wStep`), 1 repetición o 5 segundos.
+- En este modo se oculta el menú inferior (clase `body.focus`) y, al marcar una serie, se pasa a la siguiente.
+
+### 22.6 Series de aproximación (`warmupPlan()` y `addWarmups()`)
+Qué dicen los estudios (personas entrenadas):
+- **Enes, Korakakis, Schoenfeld et al. (2025)**: 1 o 2 series de aproximación (al 55 % y al 75 % del 10RM, de 3-4 repeticiones) antes de series a 10RM rindieron **igual** que no hacer ninguna. No restan, pero tampoco suman mucho.
+- **Estudio de 2024** (1 serie al 40, 60 u 80 % del 10RM): la **aproximación pesada con pocas repeticiones (80 % × 5)** dio **más volumen total** que las ligeras con muchas repeticiones.
+- Los trabajos que encuentran mejora usan 1-2 series, al menos una pesada (80-90 %). La revisión de Ribeiro et al. (2021) concluye que los resultados no son unánimes.
+
+Cómo lo aplica la app:
+- Primero un calentamiento general corto (los ejercicios del grupo Calentamiento). Después, **pocas aproximaciones, con pocas repeticiones y sin cansarte**: la primera serie efectiva ya es la buena.
+- **Primer ejercicio de cada músculo**: 50 % × 6 y 80 % × 3.
+- **Siguientes ejercicios del mismo músculo**: 70 % × 4.
+- Con lastre, el % se calcula sobre el peso total (cuerpo + lastre). Si sale por debajo de tu peso, la serie va sin lastre.
+- No se añaden con cargas ligeras (menos de 20 kg, o menos de 5 kg de lastre) ni si no se conoce el peso de trabajo.
+- Tras una aproximación, el descanso es como mucho de 60 s.
+- Se marcan con `auto: true` y no se guardan en la rutina, porque se recalculan en cada entreno.
