@@ -2,7 +2,7 @@
 
 Guía para entender cómo está hecha la app, qué hace cada archivo y cada función, y cómo modificarla o publicar cambios.
 
-**Versión descrita:** 0.5.0 · Historial de cambios: [CHANGELOG.md](CHANGELOG.md)
+**Versión descrita:** 0.5.1 · Historial de cambios: [CHANGELOG.md](CHANGELOG.md)
 **App publicada:** https://yagoperezfel.github.io/gymlog/
 **Código:** https://github.com/YagoPerezFel/gymlog
 
@@ -436,6 +436,8 @@ Todas están en el objeto **`A`** de `app.js`:
 | Temporizador | `tMinus` (−15 s), `tPlus` (+15 s), `tSkip` (cerrar) |
 | Rutinas | `newRoutine`, `editRoutine`, `rAddEx`, `rMove`, `rDel`, `rSave`, `rCancel`, `rDelete` |
 | Ejercicios | `addExercise`, `exEdit`, `pick`, `pickNew`, `viewEx` |
+
+**Buscador de ejercicios** (`filterEx()` + `searchText()`): cada palabra de la búsqueda debe aparecer en el nombre, el grupo o los sinónimos del movimiento (`FAM_ALIASES` y `WEIGHTED_ALIASES` en `data.js`), en cualquier orden y en singular o plural. Palabras como "con" o "de" se ignoran (`STOP`).
 | Catálogo | `catAdd`, `catFromPick`, `catImg`, `catPick` |
 | Calendario | `calMove` (mes anterior/siguiente), `calDay`, `hToggle`, `hDel` |
 | Progreso | `recToggle`, `bodySave`, `bodyDel` |
