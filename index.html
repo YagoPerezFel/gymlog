@@ -7,11 +7,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon.svg">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="favicon.png">
+<link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Cinzel:wght@600;700&family=Grenze+Gotisch:wght@600&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <title>GymLog</title>
 <style>
 :root{
@@ -335,11 +335,77 @@ a.btn{text-decoration:none}
 [data-theme=persona] input.switch::after{border-radius:0}
 
 /* selector de estilo en Ajustes */
-.themes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.themes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .themes button{border:2px solid var(--line);border-radius:16px;padding:0;overflow:hidden;background:none;cursor:pointer;color:var(--tx);font:600 13px var(--font)}
 .themes button.on{border-color:var(--ac)}
-.themes .tsw{display:block;height:64px}
+.themes .tsw{display:block;height:56px}
 .themes span{display:block;padding:8px 0}
+
+/* ================= ESTILO KINGDOM (inspirado en Kingdom Hearts) ================= */
+:root[data-theme=kingdom]{
+  --bg:#05060c;--card:rgba(9,13,30,.88);--card-hi:rgba(16,22,48,.92);--field:rgba(255,255,255,.07);--line:rgba(201,203,214,.22);
+  --tx:#eef0f8;--mut:#9aa0b8;--dim:#3b4160;--ac:#e8c66a;--on-ac:#14100a;--dan:#ff5a6a;--hl:232,198,106;--r:16px;
+  --nav-bg:rgba(8,11,26,.92);--nav-off:#7d84a3;--nav-on:#e8c66a;--sheet:#0a0e22;--timer-bg:rgba(8,11,26,.95);
+  --toast-bg:linear-gradient(180deg,#2a5bd6,#123080);--toast-tx:#fff;--switch-on:#3a6df0;--knob-on:#fff;
+  --body-off:#1d2442;--body-head:#121731;--body-stroke:#05060c;--thumb-filter:saturate(.7) brightness(.9);
+  --pop:0 0 0 1px rgba(201,203,214,.25),0 12px 40px rgba(0,0,0,.7);--title-font:'Grenze Gotisch',Georgia,serif;
+  --cmd:linear-gradient(180deg,#3a6df0 0%,#1d45b8 48%,#122d82 52%,#0c1f5c 100%);
+}
+/* fondo: retícula de rombos + símbolos tenues + franja de siluetas abajo */
+[data-theme=kingdom] body{background:
+  url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22150%22%20height%3D%22150%22%3E%3Cpath%20d%3D%22M10%2018C4%2013%201%2010%201%206.2C1%203.4%203.2%201.3%205.8%201.3C7.7%201.3%209.2%202.4%2010%204C10.8%202.4%2012.3%201.3%2014.2%201.3C16.8%201.3%2019%203.4%2019%206.2C19%2010%2016%2013%2010%2018Z%22%20transform%3D%22translate%2818%2022%29%20scale%280.55%29%22%20fill%3D%22%238a7258%22%20opacity%3D%220.28%22/%3E%3Cpath%20d%3D%22M2%2016L3%206L7.5%2010.5L10%202L12.5%2010.5L17%206L18%2016Z%22%20transform%3D%22translate%2892%2014%29%20scale%280.6%29%22%20fill%3D%22%238a7258%22%20opacity%3D%220.28%22/%3E%3Cpath%20d%3D%22M10%200L11.6%208.4L20%2010L11.6%2011.6L10%2020L8.4%2011.6L0%2010L8.4%208.4Z%22%20transform%3D%22translate%2858%2064%29%20scale%280.35%29%22%20fill%3D%22%23ffffff%22%20opacity%3D%220.55%22/%3E%3Cpath%20d%3D%22M2%2016L3%206L7.5%2010.5L10%202L12.5%2010.5L17%206L18%2016Z%22%20transform%3D%22translate%28122%2096%29%20scale%280.5%29%22%20fill%3D%22%238a7258%22%20opacity%3D%220.22%22/%3E%3Cpath%20d%3D%22M10%2018C4%2013%201%2010%201%206.2C1%203.4%203.2%201.3%205.8%201.3C7.7%201.3%209.2%202.4%2010%204C10.8%202.4%2012.3%201.3%2014.2%201.3C16.8%201.3%2019%203.4%2019%206.2C19%2010%2016%2013%2010%2018Z%22%20transform%3D%22translate%2834%20112%29%20scale%280.45%29%22%20fill%3D%22%238a7258%22%20opacity%3D%220.22%22/%3E%3Cpath%20d%3D%22M10%200L11.6%208.4L20%2010L11.6%2011.6L10%2020L8.4%2011.6L0%2010L8.4%208.4Z%22%20transform%3D%22translate%28112%2052%29%20scale%280.25%29%22%20fill%3D%22%23ffffff%22%20opacity%3D%220.35%22/%3E%3Cpath%20d%3D%22M10%200L11.6%208.4L20%2010L11.6%2011.6L10%2020L8.4%2011.6L0%2010L8.4%208.4Z%22%20transform%3D%22translate%288%2074%29%20scale%280.2%29%22%20fill%3D%22%23ffffff%22%20opacity%3D%220.3%22/%3E%3C/svg%3E") 0 0/150px 150px,
+  repeating-linear-gradient(45deg,rgba(255,255,255,.035) 0 1px,transparent 1px 22px),
+  repeating-linear-gradient(-45deg,rgba(255,255,255,.035) 0 1px,transparent 1px 22px),
+  radial-gradient(ellipse at 50% 110%,#16204a 0,#05060c 55%) fixed,#05060c}
+[data-theme=kingdom] body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:140px;background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22390%22%20height%3D%22140%22%20viewBox%3D%220%200%20390%20140%22%20opacity%3D%22.22%22%3E%3Cpath%20d%3D%22M2%2016L3%206L7.5%2010.5L10%202L12.5%2010.5L17%206L18%2016Z%22%20transform%3D%22translate%2810%2040%29%20scale%283.2%29%22%20fill%3D%22%23c9cbd6%22/%3E%3Cpath%20d%3D%22M10%2018C4%2013%201%2010%201%206.2C1%203.4%203.2%201.3%205.8%201.3C7.7%201.3%209.2%202.4%2010%204C10.8%202.4%2012.3%201.3%2014.2%201.3C16.8%201.3%2019%203.4%2019%206.2C19%2010%2016%2013%2010%2018Z%22%20transform%3D%22translate%2880%2052%29%20scale%282.2%29%22%20fill%3D%22%23c9cbd6%22/%3E%3Cpath%20d%3D%22M10%200L11.6%208.4L20%2010L11.6%2011.6L10%2020L8.4%2011.6L0%2010L8.4%208.4Z%22%20transform%3D%22translate%28140%2066%29%20scale%281.4%29%22%20fill%3D%22%23c9cbd6%22/%3E%3Cpath%20d%3D%22M10%2018C4%2013%201%2010%201%206.2C1%203.4%203.2%201.3%205.8%201.3C7.7%201.3%209.2%202.4%2010%204C10.8%202.4%2012.3%201.3%2014.2%201.3C16.8%201.3%2019%203.4%2019%206.2C19%2010%2016%2013%2010%2018Z%22%20transform%3D%22translate%28175%2030%29%20scale%283.4%29%22%20fill%3D%22%23c9cbd6%22/%3E%3Cpath%20d%3D%22M10%200L11.6%208.4L20%2010L11.6%2011.6L10%2020L8.4%2011.6L0%2010L8.4%208.4Z%22%20transform%3D%22translate%28250%2070%29%20scale%281.1%29%22%20fill%3D%22%23c9cbd6%22/%3E%3Cpath%20d%3D%22M2%2016L3%206L7.5%2010.5L10%202L12.5%2010.5L17%206L18%2016Z%22%20transform%3D%22translate%28280%2058%29%20scale%282.2%29%22%20fill%3D%22%23c9cbd6%22/%3E%3Cpath%20d%3D%22M10%200L11.6%208.4L20%2010L11.6%2011.6L10%2020L8.4%2011.6L0%2010L8.4%208.4Z%22%20transform%3D%22translate%28335%2040%29%20scale%281.6%29%22%20fill%3D%22%23c9cbd6%22/%3E%3Cpath%20d%3D%22M10%2018C4%2013%201%2010%201%206.2C1%203.4%203.2%201.3%205.8%201.3C7.7%201.3%209.2%202.4%2010%204C10.8%202.4%2012.3%201.3%2014.2%201.3C16.8%201.3%2019%203.4%2019%206.2C19%2010%2016%2013%2010%2018Z%22%20transform%3D%22translate%28330%2074%29%20scale%281.4%29%22%20fill%3D%22%23c9cbd6%22/%3E%3C/svg%3E") center bottom/390px 140px repeat-x;pointer-events:none;z-index:0}
+[data-theme=kingdom] main{position:relative;z-index:1}
+/* títulos góticos plateados */
+[data-theme=kingdom] h1{font-weight:600;font-size:44px;letter-spacing:.02em;background:linear-gradient(180deg,#ffffff 0%,#c9cbd6 55%,#8d92a8 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 6px rgba(58,109,240,.45))}
+[data-theme=kingdom] h2,[data-theme=kingdom] h3,[data-theme=kingdom] .calhead b{font-family:'Cinzel',Georgia,serif;font-weight:700;letter-spacing:.06em;color:#e8c66a}
+[data-theme=kingdom] .eyebrow{font-family:'Cinzel',Georgia,serif;color:#e8c66a;letter-spacing:.08em}
+[data-theme=kingdom] .wfoot b,[data-theme=kingdom] .rtinfo b,[data-theme=kingdom] .ex-t b{font-family:'Cinzel',Georgia,serif;font-weight:700;letter-spacing:.03em}
+[data-theme=kingdom] .big,[data-theme=kingdom] .stats b,[data-theme=kingdom] #ttime{font-family:'Cinzel',Georgia,serif;font-weight:700}
+/* tarjetas: azul noche translúcido con filo plateado y brillo dorado */
+[data-theme=kingdom] .w,[data-theme=kingdom] .card,[data-theme=kingdom] .stats>div{background:linear-gradient(180deg,var(--card-hi),var(--card));
+  border:1px solid rgba(201,203,214,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),inset 0 0 0 1px rgba(232,198,106,.06),0 8px 30px rgba(0,0,0,.55)}
+/* botones tipo "menú de comandos" */
+[data-theme=kingdom] .btn{background:linear-gradient(180deg,rgba(40,52,100,.9),rgba(16,22,48,.95));border:2px solid #9aa3c4;border-radius:12px;font-style:italic;letter-spacing:.02em;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 2px 0 #05060c}
+[data-theme=kingdom] .btn.primary{background:var(--cmd);border-color:#dfe4f5;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6);box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 0 18px rgba(58,109,240,.45)}
+[data-theme=kingdom] .round{background:var(--cmd);border:2px solid #c9cbd6;color:#fff}
+[data-theme=kingdom] .round.light{background:radial-gradient(circle at 35% 30%,#fff5cf,#e8c66a 45%,#9b7a2c);border-color:#fff3c4;color:#2a1d05;box-shadow:0 0 16px rgba(232,198,106,.55)}
+[data-theme=kingdom] .seg{background:rgba(9,13,30,.9);border:1px solid rgba(201,203,214,.3)}
+[data-theme=kingdom] .seg button{font-style:italic}
+[data-theme=kingdom] .seg button.on{background:var(--cmd);color:#fff;border:1px solid #dfe4f5}
+/* anillo de la semana como barra de vida (verde) y detalles dorados */
+[data-theme=kingdom] .ring .fg{stroke:#5fe06a;filter:drop-shadow(0 0 4px rgba(95,224,106,.7))}
+[data-theme=kingdom] .ring .bg{stroke:#1d2442}
+[data-theme=kingdom] main .i-trophy,[data-theme=kingdom] main .i-flame{color:#e8c66a}
+[data-theme=kingdom] .dot.on{background:#e8c66a;box-shadow:0 0 6px rgba(232,198,106,.8)}
+[data-theme=kingdom] .cday.on{background:radial-gradient(circle at 35% 30%,#fff5cf,#e8c66a 50%,#9b7a2c);color:#1a1205}
+[data-theme=kingdom] .bars i.on{background:linear-gradient(#5fe06a,#2f9a3a)}
+/* series */
+[data-theme=kingdom] .srow.done{background:rgba(58,109,240,.16)}
+[data-theme=kingdom] .srow.done .chk{background:radial-gradient(circle at 35% 30%,#b9ffbf,#5fe06a 45%,#1f7a2a);border-color:#c8ffcc;color:#06210a}
+/* barra inferior y temporizador */
+[data-theme=kingdom] nav{border:1px solid rgba(201,203,214,.35);box-shadow:0 0 0 1px rgba(232,198,106,.12),0 10px 40px rgba(0,0,0,.7)}
+[data-theme=kingdom] nav button.on{color:#e8c66a;filter:drop-shadow(0 0 6px rgba(232,198,106,.7))}
+[data-theme=kingdom] #timer .trfg{stroke:#e8c66a}
+[data-theme=kingdom] #timer.over{background:var(--cmd);color:#fff}
+[data-theme=kingdom] #toast{background:var(--cmd);border:2px solid #dfe4f5;font-style:italic}
+[data-theme=kingdom] .dlg{border:1px solid rgba(201,203,214,.4);box-shadow:0 0 0 1px rgba(232,198,106,.15),0 20px 60px rgba(0,0,0,.8)}
+[data-theme=kingdom] .sug{background:rgba(58,109,240,.14);border:1px solid rgba(58,109,240,.4)}
+[data-theme=kingdom] .live{border-color:#e8c66a;box-shadow:0 0 22px rgba(232,198,106,.25)}
+
+/* ventanas de aviso propias */
+#dialog{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:60;display:flex;align-items:center;justify-content:center;padding:24px}
+.dlg{background:var(--sheet);color:var(--tx);border:1px solid var(--line);border-radius:24px;padding:22px 20px 18px;max-width:360px;width:100%;box-shadow:var(--pop)}
+.dlg p{margin:0 0 18px;font-size:16px;line-height:1.45}
+.dlg input{margin:-6px 0 16px}
+.dlg-b{display:flex;gap:10px}.dlg-b .btn{flex:1;min-height:48px}
+.btn.danger-fill{background:var(--dan);border-color:var(--dan);color:#fff}
+[data-theme=persona] .dlg{border:3px solid #fff;border-radius:0;box-shadow:8px 8px 0 #e5141b;transform:rotate(-1deg)}
 </style>
 </head>
 <body>
@@ -355,6 +421,7 @@ a.btn{text-decoration:none}
 
 <nav id="nav"></nav>
 <div id="toast" hidden></div>
+<div id="dialog" hidden></div>
 <div id="modal" hidden><div class="sheet" id="sheet"></div></div>
 
 <script src="data.js"></script>

@@ -207,7 +207,7 @@ function addNewDefaults(d, ver) {
 
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(db)); }
-  catch (e) { alert('No se pudo guardar: ' + e.message); }
+  catch (e) { uiAlert('No se pudo guardar: ' + e.message); }
 }
 
 const exById = id => db.exercises.find(e => e.id === id);
@@ -475,7 +475,8 @@ function ransom(t) {
 
 // ---------- Estilos ----------
 const THEMES = { dark: ['Oscuro', '#000000', 'linear-gradient(135deg,#1b1b1b,#000)'], light: ['Claro', '#f2f2f7', 'linear-gradient(135deg,#fff 50%,#ff3b30 50% 62%,#ffb300 62%)'],
-  persona: ['Persona', '#070707', 'linear-gradient(118deg,#000 45%,#e5141b 45% 62%,#fff 62% 66%,#000 66%)'] };
+  persona: ['Persona', '#070707', 'linear-gradient(118deg,#000 45%,#e5141b 45% 62%,#fff 62% 66%,#000 66%)'],
+  kingdom: ['Kingdom', '#05060c', 'radial-gradient(circle at 50% 115%,#3a6df0 0,#122d82 35%,#05060c 70%)'] };
 const theme = () => THEMES[db.settings.theme] ? db.settings.theme : 'dark';
 function applyTheme() {
   document.documentElement.dataset.theme = theme();
@@ -1039,6 +1040,31 @@ function vSettings() {
     </div>`;
 }
 
+// ---------- Ventanas de aviso propias ----------
+// Sustituyen a alert/confirm/prompt del navegador (que muestran "yagoperezfel.github.io dice")
+// y siguen el estilo activo. Devuelven una promesa: true/false, o el texto escrito (null si se cancela).
+function uiDialog({ text, ok = 'Aceptar', cancel = 'Cancelar', input = null, danger = false }) {
+  return new Promise(resolve => {
+    const el = $('#dialog');
+    el.innerHTML = `<div class="dlg" role="dialog" aria-modal="true"><p>${esc(text).replace(/\n/g, '<br>')}</p>
+      ${input ? `<input id="dlgIn" value="${esc(input.value ?? '')}"${input.type ? ` inputmode="${input.type}"` : ''} autocomplete="off">` : ''}
+      <div class="dlg-b">${cancel ? `<button class="btn" data-r="0">${esc(cancel)}</button>` : ''}
+        <button class="btn ${danger ? 'danger-fill' : 'primary'}" data-r="1">${esc(ok)}</button></div></div>`;
+    el.hidden = false;
+    const inp = $('#dlgIn');
+    if (inp) { inp.focus(); inp.select(); inp.onkeydown = e => { if (e.key === 'Enter') done('1'); }; }
+    function done(r) {
+      el.hidden = true; el.onclick = null;
+      resolve(input ? (r === '1' ? inp.value : null) : r === '1');
+      el.innerHTML = '';
+    }
+    el.onclick = e => { const b = e.target.closest('[data-r]'); if (b) { e.stopPropagation(); done(b.dataset.r); } };
+  });
+}
+const uiAlert = text => uiDialog({ text, cancel: null });
+const uiConfirm = (text, ok = 'Aceptar', danger = false) => uiDialog({ text, ok, danger });
+const uiPrompt = (text, value = '', type) => uiDialog({ text, input: { value, type } });
+
 // ---------- Modal ----------
 function showModal(html) { $('#sheet').innerHTML = html; $('#modal').hidden = false; }
 function closeModal() { $('#modal').hidden = true; $('#sheet').innerHTML = ''; pickCb = null; catMode = null; clearInterval(viewerTimer); }
@@ -1117,7 +1143,7 @@ function openViewer(ex) {
 
 // ---------- Entrenamiento ----------
 function startWorkout(name, exercises, routineId) {
-  if (db.active) { alert('Ya tienes un entrenamiento en curso.'); view = 'workout'; render(); return; }
+  if (db.active) { uiAlert('Ya tienes un entrenamiento en curso.'); view = 'workout'; render(); return; }
   db.active = { id: uid(), name, routineId: routineId || null, start: Date.now(), exercises, timer: null };
   save(); view = 'workout'; render(); scrollTo(0, 0); keepAwake();
 }
@@ -1203,9 +1229,9 @@ function alarm(label) {
   notify('Descanso terminado', 'Siguiente: ' + label);
 }
 async function askNotifPermission() {
-  if (!('Notification' in window)) { alert('Este navegador no soporta notificaciones. En iPhone, primero añade la app a la pantalla de inicio.'); return false; }
+  if (!('Notification' in window)) { uiAlert('Este navegador no soporta notificaciones. En iPhone, primero añade la app a la pantalla de inicio.'); return false; }
   const p = await Notification.requestPermission();
-  if (p !== 'granted') alert('No se han permitido las notificaciones. Seguirás teniendo sonido y vibración con la app abierta.');
+  if (p !== 'granted') uiAlert('No se han permitido las notificaciones. Seguirás teniendo sonido y vibración con la app abierta.');
   return p === 'granted';
 }
 
@@ -1298,7 +1324,7 @@ async function checkUpdate(manual) {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     info = await r.json();
   } catch (e) {
-    if (manual) alert('No se pudo comprobar si hay actualizaciones. ¿Tienes conexión a internet?');
+    if (manual) uiAlert('No se pudo comprobar si hay actualizaciones. ¿Tienes conexión a internet?');
     return;
   }
   if (info.version === APP_VERSION) {
@@ -1311,7 +1337,7 @@ async function checkUpdate(manual) {
 }
 async function applyUpdate() {
   if (!updateInfo) return;
-  if (!confirm(`Hay una versión nueva (${updateInfo.version}). ¿Actualizar ahora?\n\nTus entrenos, rutinas y medidas no se borran.`)) return;
+  if (!(await uiConfirm(`Hay una versión nueva (${updateInfo.version}). ¿Actualizar ahora?\n\nTus entrenos, rutinas y medidas no se borran.`, 'Actualizar'))) return;
   toast('Descargando actualización...');
   try {
     const cache = await caches.open(APP_CACHE), t = Date.now();
@@ -1324,7 +1350,7 @@ async function applyUpdate() {
     if (reg) await reg.update().catch(() => { });
     location.reload();
   } catch (e) {
-    alert('No se pudo descargar la actualización (' + e.message + '). Inténtalo de nuevo con conexión.');
+    uiAlert('No se pudo descargar la actualización (' + e.message + '). Inténtalo de nuevo con conexión.');
   }
 }
 
@@ -1349,9 +1375,9 @@ const A = {
   closeModal,
   sheet(b, i) { const f = sheetOpts[i][1]; closeModal(); f(); },
   pick(b, i, j, id) { const cb = pickCb; closeModal(); if (cb) cb(id); },
-  pickNew() {
+  async pickNew() {
     const name = $('#pickQ').value.trim();
-    const kind = confirm(`¿«${name}» usa peso (pesas, discos, máquina...)?`) ? 'w' : 'r';
+    const kind = (await uiDialog({ text: `¿«${name}» usa peso (pesas, discos, máquina...)?`, ok: 'Sí, con peso', cancel: 'No, solo reps' })) ? 'w' : 'r';
     const e = { id: uid(), name, group: 'Otros', kind, img: '', mus: { p: [], s: [] }, bw: 0, met: 0, cardio: '' };
     applyMove(e, moveOf(name));
     db.exercises.push(e); save();
@@ -1367,7 +1393,7 @@ const A = {
   async copyLink() {
     const url = location.origin + location.pathname;
     try { await navigator.clipboard.writeText(url); toast('Enlace copiado'); }
-    catch (e) { prompt('Copia este enlace:', url); }
+    catch (e) { await uiPrompt('Copia este enlace:', url); }
   },
   checkUpdate() { checkUpdate(true); },
   setTheme(b, i, j, id) { db.settings.theme = id; save(); applyTheme(); render(); },
@@ -1395,8 +1421,8 @@ const A = {
     x.sets.push({ w: last ? last.w : '', r: '', v: last ? last.v : '', g: last ? last.g : '', l: last ? last.l : '1', done: false });
     save(); render();
   },
-  delSet(b, i, j) {
-    if (!confirm(`¿Eliminar la serie ${j + 1}?`)) return;
+  async delSet(b, i, j) {
+    if (!(await uiConfirm(`¿Eliminar la serie ${j + 1}?`, 'Eliminar', true))) return;
     db.active.exercises[i].sets.splice(j, 1); save(); render();
   },
   // Menú de una serie: tipo, RPE o eliminar
@@ -1429,7 +1455,7 @@ const A = {
   share(b, i, j, id) { shareWorkout(db.history.find(h => h.id === id)); },
   async shareSend() {
     try { await navigator.share({ files: [shareFile], title: 'Mi entreno en GymLog' }); }
-    catch (e) { if (e.name !== 'AbortError') alert('No se pudo compartir: ' + e.message); }
+    catch (e) { if (e.name !== 'AbortError') uiAlert('No se pudo compartir: ' + e.message); }
   },
   toggle(b, i, j) {
     const x = db.active.exercises[i], s = x.sets[j];
@@ -1452,7 +1478,7 @@ const A = {
     openSheet(exInfo(list[i]).name, [
       ['Subir', () => { moveItem(list, i, -1); save(); render(); }],
       ['Bajar', () => { moveItem(list, i, 1); save(); render(); }],
-      ['Eliminar ejercicio', () => { if (confirm('¿Quitar este ejercicio del entreno?')) { list.splice(i, 1); save(); render(); } }, 'danger'],
+      ['Eliminar ejercicio', async () => { if (await uiConfirm('¿Quitar este ejercicio del entreno?', 'Quitar', true)) { list.splice(i, 1); save(); render(); } }, 'danger'],
     ]);
   },
   wkMenu() {
@@ -1461,7 +1487,7 @@ const A = {
       ['Descartar entreno', () => A.discard(), 'danger'],
     ]);
   },
-  finish() {
+  async finish() {
     const w = db.active;
     const totals = activeTotals();
     const exercises = w.exercises.map((x, k) => {
@@ -1472,11 +1498,12 @@ const A = {
       return { exId: x.exId, name: ex.name, kind: ex.kind, bw: ex.bw || 0, cardio: ex.cardio || '', kcal: Math.round(totals.per[k] || 0), sets };
     }).filter(x => x.sets.length);
     if (!exercises.length) {
-      if (confirm('No has completado ninguna serie. ¿Descartar el entrenamiento?')) { db.active = null; save(); releaseAwake(); view = 'home'; render(); }
+      // sin series hechas no hay nada que guardar: terminar = cerrar el entreno
+      if (await uiConfirm('No has completado ninguna serie. ¿Quieres terminar el entrenamiento?', 'Terminar')) { db.active = null; save(); releaseAwake(); view = 'home'; render(); }
       return;
     }
     const pending = w.exercises.reduce((n, x) => n + x.sets.filter(s => !s.done).length, 0);
-    if (!confirm(pending ? `Hay ${pending} series sin marcar que no se guardarán. ¿Terminar?` : '¿Terminar y guardar el entrenamiento?')) return;
+    if (pending && !(await uiConfirm('No has completado todas las series. ¿Quieres terminar el entrenamiento?', 'Terminar'))) return;
     db.history.push({ id: uid(), name: w.name, routineId: w.routineId, start: w.start, end: Date.now(), exercises,
       bodyKg: bodyWeight() || 0, kcal: totals.rmr ? Math.round(totals.kcal) : null });
     if (totals.rmr) setTimeout(() => toast(`Entreno guardado · ≈ ${fkg(totals.kcal)} kcal · ${fkg(totals.vol)} kg`), 300);
@@ -1486,11 +1513,11 @@ const A = {
     calMonth = new Date(new Date(w.start).getFullYear(), new Date(w.start).getMonth(), 1).getTime();
     view = 'calendar'; render(); scrollTo(0, 0);
   },
-  saveAsRoutine() {
+  async saveAsRoutine() {
     const w = db.active;
-    if (!w.exercises.length) return alert('Añade algún ejercicio primero.');
+    if (!w.exercises.length) return uiAlert('Añade algún ejercicio primero.');
     const old = db.routines.find(r => r.id === w.routineId);
-    const name = prompt('Nombre de la rutina', w.name);
+    const name = await uiPrompt('Nombre de la rutina', w.name);
     if (!name || !name.trim()) return;
     const items = w.exercises.map(x => ({
       exId: x.exId, sets: x.sets.length, rest: x.rest,
@@ -1501,8 +1528,8 @@ const A = {
     w.name = name.trim(); save(); render();
     toast('Rutina guardada');
   },
-  discard() {
-    if (!confirm('¿Descartar este entrenamiento? Se perderá lo registrado.')) return;
+  async discard() {
+    if (!(await uiConfirm('¿Descartar este entrenamiento? Se perderá lo registrado.', 'Descartar', true))) return;
     db.active = null; save(); releaseAwake(); view = 'home'; render();
   },
 
@@ -1523,23 +1550,23 @@ const A = {
   rDel(b, i) { draft.items.splice(i, 1); render(); },
   rCancel() { draft = null; render(); },
   rSave() {
-    if (!draft.name.trim()) return alert('Ponle un nombre a la rutina.');
-    if (!draft.items.length) return alert('Añade al menos un ejercicio.');
+    if (!draft.name.trim()) return uiAlert('Ponle un nombre a la rutina.');
+    if (!draft.items.length) return uiAlert('Añade al menos un ejercicio.');
     draft.name = draft.name.trim();
     if (draft.id) db.routines[db.routines.findIndex(r => r.id === draft.id)] = draft;
     else { draft.id = uid(); db.routines.push(draft); }
     draft = null; save(); render();
   },
-  rDelete() {
-    if (!confirm('¿Eliminar esta rutina? Tu historial no se borra.')) return;
+  async rDelete() {
+    if (!(await uiConfirm('¿Eliminar esta rutina? Tu historial no se borra.', 'Eliminar', true))) return;
     db.routines = db.routines.filter(r => r.id !== draft.id); draft = null; save(); render();
   },
 
   // Ejercicios
   addExercise() {
     const name = $('#nxName').value.trim();
-    if (!name) return alert('Escribe un nombre.');
-    if (db.exercises.some(e => norm(e.name) === norm(name))) return alert('Ese ejercicio ya existe.');
+    if (!name) return uiAlert('Escribe un nombre.');
+    if (db.exercises.some(e => norm(e.name) === norm(name))) return uiAlert('Ese ejercicio ya existe.');
     const e = { id: uid(), name, group: $('#nxGroup').value.trim() || 'Otros', kind: $('#nxKind').value, img: '', mus: { p: [], s: [] }, bw: 0, met: 0, cardio: '' };
     applyMove(e, moveOf(name));
     db.exercises.push(e);
@@ -1549,18 +1576,18 @@ const A = {
     const e = exById(id);
     openSheet(e.name, [
       [e.img ? 'Ver foto' : 'Añadir foto', () => e.img ? openViewer(e) : openCatalog({ type: 'img', exId: id })],
-      ['Renombrar', () => { const n = prompt('Nuevo nombre', e.name); if (n && n.trim()) { e.name = n.trim(); save(); render(); } }],
-      ['Cambiar grupo (' + e.group + ')', () => { const g = prompt('Grupo muscular', e.group); if (g && g.trim()) { e.group = g.trim(); save(); render(); } }],
+      ['Renombrar', async () => { const n = await uiPrompt('Nuevo nombre', e.name); if (n && n.trim()) { e.name = n.trim(); save(); render(); } }],
+      ['Cambiar grupo (' + e.group + ')', async () => { const g = await uiPrompt('Grupo muscular', e.group); if (g && g.trim()) { e.group = g.trim(); save(); render(); } }],
       ['Tipo: ' + KINDS[e.kind], () => openSheet('Tipo de registro', Object.entries(KINDS).map(([k, l]) => [l, () => { e.kind = k; save(); render(); }]))],
       ['Músculos trabajados', () => openMuscleEditor(e)],
-      [`Peso corporal: ${Math.round((e.bw || 0) * 100)}%`, () => {
-        const v = prompt('¿Qué % de tu peso corporal mueves en este ejercicio? (dominadas 100, flexiones 64, 0 si no aplica)', Math.round((e.bw || 0) * 100));
+      [`Peso corporal: ${Math.round((e.bw || 0) * 100)}%`, async () => {
+        const v = await uiPrompt('¿Qué % de tu peso corporal mueves en este ejercicio? (dominadas 100, flexiones 64, 0 si no aplica)', Math.round((e.bw || 0) * 100), 'decimal');
         if (v !== null && !isNaN(parseFloat(v))) { e.bw = Math.max(0, Math.min(100, parseFloat(v))) / 100; e.bwUser = true; save(); render(); }
       }],
-      ['Eliminar', () => {
-        if (db.active && db.active.exercises.some(x => x.exId === id)) return alert('Está en el entreno en curso; quítalo de ahí primero.');
+      ['Eliminar', async () => {
+        if (db.active && db.active.exercises.some(x => x.exId === id)) return uiAlert('Está en el entreno en curso; quítalo de ahí primero.');
         const n = db.routines.filter(r => r.items.some(it => it.exId === id)).length;
-        if (!confirm(`¿Eliminar «${e.name}»?${n ? ` Se quitará de ${n} rutina(s).` : ''} El historial se conserva.`)) return;
+        if (!(await uiConfirm(`¿Eliminar «${e.name}»?${n ? ` Se quitará de ${n} rutina(s).` : ''} El historial se conserva.`, 'Eliminar', true))) return;
         db.routines.forEach(r => { r.items = r.items.filter(it => it.exId !== id); });
         db.exercises = db.exercises.filter(x => x.id !== id); save(); render();
       }, 'danger'],
@@ -1572,7 +1599,7 @@ const A = {
   catAdd() { openCatalog({ type: 'add', cb: null }); },
   catFromPick() { openCatalog({ type: 'add', cb: pickCb }); },
   catImg(b, i, j, id) { openCatalog({ type: 'img', exId: id }); },
-  catPick(b, i, j, id) {
+  async catPick(b, i, j, id) {
     const c = catalog.find(c => c[0] === id), mode = catMode;
     if (!c || !mode) return;
     if (mode.type === 'img') {
@@ -1580,7 +1607,7 @@ const A = {
       save(); closeModal(); render(); toast('Foto actualizada');
       return;
     }
-    const name = prompt('Nombre del ejercicio (puedes ponerlo en español)', c[1]);
+    const name = await uiPrompt('Nombre del ejercicio (puedes ponerlo en español)', c[1]);
     if (!name || !name.trim()) return;
     let e = db.exercises.find(e => norm(e.name) === norm(name.trim()));
     if (e) { if (!e.img) e.img = id; }
@@ -1599,8 +1626,8 @@ const A = {
   calMove(b, i, j) { const m = new Date(calMonth); calMonth = new Date(m.getFullYear(), m.getMonth() + j, 1).getTime(); calDay = null; render(); },
   calDay(b, i, j, id) { calDay = !id || calDay === id ? null : id; render(); },
   hToggle(b, i, j, id) { openHist = openHist === id ? null : id; render(); },
-  hDel(b, i, j, id) {
-    if (!confirm('¿Eliminar este entrenamiento del historial?')) return;
+  async hDel(b, i, j, id) {
+    if (!(await uiConfirm('¿Eliminar este entrenamiento del historial?', 'Eliminar', true))) return;
     db.history = db.history.filter(h => h.id !== id); save(); render();
   },
 
@@ -1614,16 +1641,16 @@ const A = {
       const v = num(($('#b_' + k) || {}).value || '');
       if (v > 0) { e[k] = v; any = true; }
     });
-    if (!any) return alert('Escribe al menos una medida (peso, grasa, cintura...).');
+    if (!any) return uiAlert('Escribe al menos una medida (peso, grasa, cintura...).');
     db.body.push(e); save(); render(); toast('Medidas guardadas');
   },
-  bodyDel(b, i, j, id) {
-    if (!confirm('¿Eliminar este registro?')) return;
+  async bodyDel(b, i, j, id) {
+    if (!(await uiConfirm('¿Eliminar este registro?', 'Eliminar', true))) return;
     db.body = db.body.filter(e => e.id !== id); save(); render();
   },
 
   // Ajustes
-  testAlarm() { unlockAudio(); setTimeout(() => alarm('prueba'), 5000); alert('Bloquea la pantalla o cambia de app: en 5 segundos sonará el aviso.'); },
+  testAlarm() { unlockAudio(); setTimeout(() => alarm('prueba'), 5000); uiAlert('Bloquea la pantalla o cambia de app: en 5 segundos sonará el aviso.'); },
   export() {
     const blob = new Blob([JSON.stringify(db, null, 1)], { type: 'application/json' });
     const a = document.createElement('a');
@@ -1632,9 +1659,9 @@ const A = {
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   },
-  reset() {
-    if (!confirm('¿Borrar TODOS los datos (rutinas, historial, ejercicios)? No se puede deshacer.')) return;
-    if (!confirm('¿Seguro del todo?')) return;
+  async reset() {
+    if (!(await uiConfirm('¿Borrar TODOS los datos (rutinas, historial, ejercicios)? No se puede deshacer.', 'Borrar', true))) return;
+    if (!(await uiConfirm('¿Seguro del todo?', 'Sí, borrar todo', true))) return;
     localStorage.removeItem(KEY); db = load(); draft = null; view = 'home'; render();
   },
 };
@@ -1694,10 +1721,10 @@ async function onField(e) {
       try {
         const d = JSON.parse(await file.text());
         if (!Array.isArray(d.exercises) || !Array.isArray(d.history)) throw new Error('formato no válido');
-        if (!confirm('Esto reemplazará todos tus datos actuales. ¿Continuar?')) return;
+        if (!(await uiConfirm('Esto reemplazará todos tus datos actuales. ¿Continuar?', 'Importar', true))) return;
         localStorage.setItem(KEY, JSON.stringify(d)); db = load(); view = 'home'; render();
-        alert('Datos importados');
-      } catch (err) { alert('No se pudo importar: ' + err.message); }
+        uiAlert('Datos importados');
+      } catch (err) { uiAlert('No se pudo importar: ' + err.message); }
       return;
     }
   }

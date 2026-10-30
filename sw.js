@@ -4,7 +4,7 @@
 //   o este archivo cuando cambia. Los datos del usuario (localStorage) nunca se tocan.
 const APP_CACHE = 'gymlog-app';
 const IMG_CACHE = 'gymlog-img';
-const FILES = ['./', './index.html', './data.js', './app.js', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png', './catalog.json'];
+const FILES = ['./', './index.html', './data.js', './app.js', './manifest.json', './favicon.png', './icon-180.png', './icon-192.png', './icon-512.png', './catalog.json'];
 
 // Descarga una copia fresca saltándose cualquier caché intermedia (?t=...)
 const fresh = url => fetch(url + (url.includes('?') ? '&' : '?') + 't=' + Date.now(), { cache: 'no-store' });
