@@ -123,6 +123,7 @@ const DEFAULT_EX_DATA = [
   // Calistenia — tirón
   ['Dominadas con lastre', 'Calistenia', 'w', 'Pullups', 'back', 'biceps,forearms,shoulders,traps', 1, MET.cali],
   ['Dominadas supinas (chin ups)', 'Calistenia', 'r', 'Chin-Up', 'back,biceps', 'forearms,shoulders,traps', 1, MET.cali],
+  ['Dominadas supinas con lastre', 'Calistenia', 'w', 'Chin-Up', 'back,biceps', 'forearms,shoulders,traps', 1, MET.cali],
   ['Dominadas agarre ancho', 'Calistenia', 'r', 'Wide-Grip_Rear_Pull-Up', 'back', 'biceps,forearms,shoulders,traps', 1, MET.cali],
   ['Dominadas arqueras', 'Calistenia', 'r', 'Pullups', 'back', 'biceps,forearms,shoulders,traps', 1, MET.cali],
   ['Dominadas negativas', 'Calistenia', 'r', 'Pullups', 'back', 'biceps,forearms,shoulders,traps', 1, MET.cali],
@@ -153,7 +154,19 @@ const FAMILY = {
   'Dominadas': 'pullup', 'Dominadas con lastre': 'pullup', 'Dominadas negativas': 'pullup',
   'Fondos': 'dip', 'Fondos con lastre': 'dip',
   'Flexiones': 'pushup', 'Flexiones con lastre': 'pushup',
+  'Dominadas supinas (chin ups)': 'chinup', 'Dominadas supinas con lastre': 'chinup',
 };
+// Ejercicios por defecto añadidos en cada versión (para dárselos también a quien ya tenía datos)
+const NEW_DEFAULTS = { 5: ['Dominadas supinas con lastre'] };
+
+// Sinónimos para el buscador (español e inglés) según el movimiento
+const FAM_ALIASES = {
+  pullup: 'dominada pull up ups pullup pullups', chinup: 'dominada supina chin up ups chinup chinups',
+  dip: 'fondo dip dips', benchdip: 'fondo banco bench dip dips', pushup: 'flexion push up ups pushup pushups',
+  muscleup: 'muscle up', hspu: 'pino handstand push up hspu', pike: 'pike push up', invrow: 'remo invertido australianas inverted row',
+  pistol: 'pistol squat sentadilla',
+};
+const WEIGHTED_ALIASES = 'lastre lastrado lastrada lastrados lastradas con peso weighted';
 
 // Reconocimiento de movimientos de calistenia por el nombre (español o inglés), para ejercicios
 // del catálogo o creados por ti: % de peso corporal, músculos y familia (para el estimador).

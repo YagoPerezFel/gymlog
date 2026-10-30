@@ -7,6 +7,16 @@ Formato: `mayor.menor.parche`. Sube **menor** con funciones nuevas y **parche** 
 
 ---
 
+## 0.5.1 — Correcciones de la primera prueba · 30 oct 2026
+**Corregido**
+- **No se podían guardar las medidas corporales** (detectado en iPhone, pero pasaba en todos los móviles desde la 0.3.0). Al pasar la altura al Perfil, *Guardar medidas* seguía buscando ese campo y daba error.
+- **El buscador no encontraba los ejercicios con lastre** ("fondos con peso", "flexiones lastradas", "weighted dips"...). Ahora busca por palabras en cualquier orden, en singular o plural, y con sinónimos en español e inglés según el movimiento: lastre / lastrado / con peso / weighted, fondos / dips, flexiones / push ups, dominadas / pull ups / chin ups...
+
+**Nuevo**
+- **Dominadas supinas con lastre**, enlazadas con las supinas en el estimador y la progresión, igual que dominadas y fondos con su versión con lastre. Se añade sola a quien ya tenía datos.
+
+---
+
 ## 0.5.0 — Estilos visuales · 29 oct 2026
 **Nuevo**
 - **Ajustes → Estilo** con tres temas que se aplican al instante:
@@ -105,4 +115,5 @@ Formato: `mayor.menor.parche`. Sube **menor** con funciones nuevas y **parche** 
 | 0.3.0 | 2.1.0 / 2.2.0 | `5969f68` |
 | 0.3.1 | 2.3.0 | `f6bc763` |
 | 0.4.0 | 2.4.0 | `8763b87` |
-| 0.5.0 | 2.5.0 | este commit |
+| 0.5.0 | 2.5.0 | `f220405` |
+| 0.5.1 | — | correcciones |

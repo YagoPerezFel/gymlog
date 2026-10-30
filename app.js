@@ -1,7 +1,7 @@
 'use strict';
 
 // Versión de la app. Al publicar cambios hay que subirla aquí y en version.json
-const APP_VERSION = '0.5.0';
+const APP_VERSION = '0.5.1';
 
 // ---------- Utilidades ----------
 const KEY = 'gymlog_v1';
@@ -119,12 +119,13 @@ function load() {
   try { d = JSON.parse(localStorage.getItem(KEY)); } catch (e) { }
   if (!d) d = {
     exercises: DEFAULT_EX_DATA.map(e => ({ id: uid(), ...exFromData(e) })),
-    routines: [], history: [], active: null, dataVer: 4,
+    routines: [], history: [], active: null, dataVer: 5,
   };
   d.body ||= [];
   // Datos de versiones anteriores: añade la foto a los ejercicios por defecto
   if ((d.dataVer || 0) < 3) migrateV3(d);
   if (d.dataVer < 4) migrateV4(d);
+  if (d.dataVer < 5) addNewDefaults(d, 5);
   d.profile = Object.assign({ sex: '', birthYear: null, height: null }, d.profile);
   if (!d.profile.height) { const h = d.body.filter(e => e.height).sort((a, b) => b.date - a.date)[0]; if (h) d.profile.height = h.height; }
   d.settings = Object.assign({ rest: 90, sound: true, vibrate: true, notify: true, awake: true, weekGoal: 3 }, d.settings);
@@ -195,6 +196,13 @@ function migrateV4(d) {
   }));
   if (d.active) d.active.exercises.forEach(x => { const ex = byId[x.exId]; if (ex && !x.bw) x.bw = ex.bw; });
   d.dataVer = 4;
+}
+// Añade los ejercicios por defecto nuevos de una versión si no los tienes ya
+function addNewDefaults(d, ver) {
+  const have = new Set(d.exercises.map(e => norm(e.name)));
+  DEFAULT_EX_DATA.filter(e => NEW_DEFAULTS[ver].includes(e[0]) && !have.has(norm(e[0])))
+    .forEach(e => d.exercises.push({ id: uid(), ...exFromData(e) }));
+  d.dataVer = ver;
 }
 
 function save() {
@@ -723,9 +731,17 @@ function vRoutines() {
     + (db.routines.map(r => routineCard(r, true)).join('') || '<p class="muted center" style="margin:40px 0">Todavía no hay rutinas.<br>Crea una con el botón +</p>');
 }
 
+// Texto en el que se busca un ejercicio: nombre, grupo y sinónimos de su movimiento
+function searchText(e) {
+  const fam = e.fam || FAMILY[e.name] || (moveOf(e.name) || {}).fam;
+  return norm([e.name, e.group, FAM_ALIASES[fam] || '', e.kind === 'w' && e.bw ? WEIGHTED_ALIASES : ''].join(' '));
+}
+const STOP = new Set(['con', 'de', 'del', 'en', 'el', 'la', 'los', 'las', 'y', 'a', 'with', 'the']);
+// Todas las palabras de la búsqueda deben aparecer (en cualquier orden; plural o singular)
 function filterEx(q) {
-  q = norm(q.trim());
-  return db.exercises.filter(e => !q || norm(e.name).includes(q) || norm(e.group).includes(q));
+  const words = norm(q.trim()).split(/\s+/).filter(w => w && !STOP.has(w));
+  if (!words.length) return db.exercises;
+  return db.exercises.filter(e => { const t = searchText(e); return words.every(w => t.includes(w) || t.includes(w.replace(/e?s$/, ''))); });
 }
 function grouped(list, rowFn) {
   const g = {};
@@ -1594,9 +1610,9 @@ const A = {
   bodySave() {
     const e = { id: uid(), date: new Date($('#bDate').value + 'T12:00').getTime() || Date.now() };
     let any = false;
-    BODY_FIELDS.forEach(([k]) => {
-      const v = num($('#b_' + k).value);
-      if (v > 0) { e[k] = v; if (k !== 'height') any = true; }
+    BODY_FORM.forEach(([k]) => {
+      const v = num(($('#b_' + k) || {}).value || '');
+      if (v > 0) { e[k] = v; any = true; }
     });
     if (!any) return alert('Escribe al menos una medida (peso, grasa, cintura...).');
     db.body.push(e); save(); render(); toast('Medidas guardadas');
