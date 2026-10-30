@@ -1,7 +1,7 @@
 'use strict';
 
 // Versión de la app. Al publicar cambios hay que subirla aquí y en version.json
-const APP_VERSION = '0.5.1';
+const APP_VERSION = '0.6.0';
 
 // ---------- Utilidades ----------
 const KEY = 'gymlog_v1';
@@ -55,6 +55,7 @@ const ICONS = {
   ruler: '<rect x="2.5" y="8" width="19" height="8" rx="2"/><path d="M6.5 8v3M10 8v4M13.5 8v3M17 8v4"/>',
   trash: '<path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13"/>',
   edit: '<path d="M4.5 19.5h4l10-10-4-4-10 10zM13 7l4 4"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
   up: '<path d="M12 19V5M6.5 10.5L12 5l5.5 5.5"/>',
   down: '<path d="M12 5v14M6.5 13.5L12 19l5.5-5.5"/>',
   refresh: '<path d="M19.5 11A7.5 7.5 0 0 0 6 6.5L4.5 8M4.5 4v4h4M4.5 13A7.5 7.5 0 0 0 18 17.5l1.5-1.5M19.5 20v-4h-4"/>',
@@ -127,6 +128,7 @@ function load() {
   if (d.dataVer < 4) migrateV4(d);
   if (d.dataVer < 5) addNewDefaults(d, 5);
   d.profile = Object.assign({ sex: '', birthYear: null, height: null }, d.profile);
+  d.user = Object.assign({ name: '', photo: '', title: '' }, d.user);
   if (!d.profile.height) { const h = d.body.filter(e => e.height).sort((a, b) => b.date - a.date)[0]; if (h) d.profile.height = h.height; }
   d.settings = Object.assign({ rest: 90, sound: true, vibrate: true, notify: true, awake: true, weekGoal: 3 }, d.settings);
   return d;
@@ -461,13 +463,17 @@ function render() {
     b.classList.toggle('on', b.dataset.view === navView);
     b.classList.toggle('live', b.dataset.view === 'home' && !!db.active);
   });
-  const fn = { home: vHome, workout: vWorkout, routines: vRoutines, calendar: vCalendar, progress: vProgress, settings: vSettings }[view];
+  const fn = { home: vHome, workout: vWorkout, routines: vRoutines, calendar: vCalendar, progress: vProgress, settings: vSettings, user: vUser }[view];
   $('#app').innerHTML = fn();
   renderTimer();
 }
 
 const header = (title, right = '', eyebrow = '') =>
-  `<header class="top"><div>${eyebrow ? `<p class="eyebrow">${eyebrow}</p>` : ''}<h1>${theme() === 'persona' ? ransom(title) : title}</h1></div>${right}</header>`;
+  `<header class="top"><div>${eyebrow ? `<p class="eyebrow">${eyebrow}</p>` : ''}<h1>${theme() === 'persona' ? ransom(title) : title}</h1></div>${right}${avatarBtn()}</header>`;
+// Botón de perfil: tu foto (o iniciales) con tu nivel
+const initials = () => db.user.name.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+const avatarImg = () => db.user.photo ? `<img src="${db.user.photo}" alt="">` : `<span>${initials() || ic('user', 22)}</span>`;
+const avatarBtn = () => `<button class="avatar" data-a="go" data-id="user" aria-label="Perfil">${avatarImg()}<i class="lvb">${levelInfo().level}</i></button>`;
 // Letras sueltas con estilos alternos (blanco, negro, rojo, girado), siempre igual para el mismo texto
 function ransom(t) {
   return [...t].map((ch, k) => ch === ' ' ? '<i class="rn sp"></i>' : `<span class="rn r${(ch.charCodeAt(0) * 7 + k * 3) % 4}">${esc(ch)}</span>`).join('');
@@ -542,7 +548,8 @@ function vHome() {
       <div class="hrow"><div><small class="muted"><span class="pulse"></span>Entreno en curso</small><b style="display:block;font-size:20px;margin-top:4px">${esc(db.active.name)}</b>
       <small class="muted">${db.active.exercises.length} ejercicios · ${fmt((Date.now() - db.active.start) / 1000)}</small></div>
       <span class="round light">${ic('chevR')}</span></div></button>` : '';
-  const today = cap(new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }));
+  const today = db.user.name.trim() ? `Hola, ${esc(db.user.name.trim().split(/\s+/)[0])} · ${new Date().toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}`
+    : cap(new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }));
   return header('Entrenar', `<button class="round" data-a="startEmpty" aria-label="Entreno libre">${ic('plus')}</button>`, today)
     + updateBanner() + installCard() + notifTip + active +
     `<div class="wgrid">
@@ -575,6 +582,49 @@ function homeMuscles() {
       <div><b>Músculos esta semana</b>
         ${top.length ? top.slice(0, 4).map(([k, v]) => `<small><i class="dotc" style="background:${musColor(v.sets)}"></i>${MUSCLES[k][0]} · ${fser(v.sets)}</small>`).join('')
           : '<small>Entrena y se irán iluminando</small>'}</div></div></button>`;
+}
+
+// ---------- Perfil de usuario: foto, nombre, nivel, medidas y vitrina de medallas ----------
+const fmtMedal = v => v == null ? '—' : v < 5 && v % 1 ? (Math.round(v * 100) / 100).toLocaleString('es-ES') : fkg(v);
+const medalName = m => !m.secret && m.tier === 5 ? m.master : m.name;
+function vUser() {
+  const u = db.user, st = computeStats(), li = levelInfo(st.totalKg), medals = medalStates(st), titles = unlockedTitles(li.level, medals);
+  const title = titles.includes(u.title) ? u.title : levelTitle(li.level);
+  const p = profile(), bmi = p.height && p.weight ? p.weight / (p.height / 100) ** 2 : 0, fat = latestBody('fat');
+  const got = medals.filter(m => m.tier >= 0).length, cats = [...new Set(medals.map(m => m.cat))];
+  const meas = [['Peso', p.weight ? `${p.weight} kg` : '—'], ['Altura', p.height ? `${p.height} cm` : '—'], ['IMC', bmi ? r1(bmi) : '—'],
+    ['Edad', p.age ? `${p.age} años` : '—'], ['Grasa', fat ? `${fat.v} %` : '—'], ['Sexo', { m: 'Hombre', f: 'Mujer' }[p.sex] || '—']];
+  return `<header class="top"><button class="round" data-a="go" data-id="home" aria-label="Volver">${ic('back')}</button>
+      <div class="wk-t"><b>Perfil</b></div><span style="width:46px"></span></header>
+    <div class="card ucard">
+      <label class="bigav">${avatarImg()}<input type="file" accept="image/*" data-f="uPhoto" hidden><i class="cam">${ic('image', 16)}</i></label>
+      ${u.photo ? '<button class="link" data-a="photoDel">Quitar foto</button>' : '<p class="muted small center">Toca para poner tu foto</p>'}
+      <input class="uname" data-f="uName" value="${esc(u.name)}" placeholder="¿Cómo te llamamos?" autocomplete="off">
+      <select class="utitle" data-f="uTitle" aria-label="Título">${titles.map(t => `<option${t === title ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>
+      ${xpBar(li, true)}
+      <p class="muted small center">Cada kg que levantas es 1 punto de experiencia · ${fkg(li.xp)} kg en total</p>
+    </div>
+    <div class="stats s4"><div><small>Entrenos</small><b>${st.workouts}</b></div><div><small>Medallas</small><b>${got}/${medals.length}</b></div>
+      <div><small>Mejor racha</small><b>${st.bestStreak} sem.</b></div><div><small>Récords</small><b>${st.prs}</b></div></div>
+    <div class="card"><div class="ex-head"><div class="ex-t"><b>Medidas</b><small>Último registro</small></div><button class="link" data-a="goBody">Ver todas ›</button></div>
+      <div class="meas">${meas.map(([l, v]) => `<div><small>${l}</small><b>${v}</b></div>`).join('')}</div></div>
+    <div class="sec"><h2>Medallas</h2><span class="muted small">${got} de ${medals.length}</span></div>
+    ${cats.map(c => `<p class="mcat">${c}</p><div class="medals">${medals.filter(m => m.cat === c).map(medalCard).join('')}</div>`).join('')}`;
+}
+function medalCard(m) {
+  const hidden = m.secret && m.tier < 0, pct = m.next ? Math.min(100, m.value / m.next * 100) : 100;
+  return `<button class="mcard${m.tier < 0 ? ' off' : ''}" data-a="medal" data-id="${m.id}">${medalSvg(m, 76)}
+    <b>${hidden ? '???' : esc(medalName(m))}</b>
+    <small>${m.secret ? (m.tier >= 0 ? 'Secreta' : 'Secreta') : m.tier >= 0 ? TIERS[m.tier][0] : 'Bloqueada'}</small>
+    ${!m.secret && m.tier < 5 ? `<span class="mprog"><i style="width:${pct.toFixed(0)}%"></i></span><small class="mnum">${fmtMedal(m.value)} / ${fmtMedal(m.next)}</small>` : ''}</button>`;
+}
+// Celebración al terminar un entreno: experiencia ganada, subida de nivel y medallas nuevas
+function celebrate(gain, before, after, lvBefore) {
+  const li = levelInfo(), news = after.filter(m => m.tier > (before[m.id] ?? -1));
+  showModal(`<div class="celeb"><p class="eyebrow">Entreno completado</p><h3>+${fkg(gain)} XP</h3>${xpBar(li, true)}
+    ${li.level > lvBefore ? `<div class="lvup">¡Subes a nivel ${li.level}!<small>Nuevo título disponible: ${esc(levelTitle(li.level))}</small></div>` : ''}
+    ${news.map(m => `<div class="cmed">${medalSvg(m, 84)}<div><b>${esc(medalName(m))}</b><small>${m.secret ? 'Medalla secreta' : 'Nivel ' + TIERS[m.tier][0]}${!m.secret && m.tier === 5 ? ' · nuevo título' : ''}</small></div></div>`).join('')}
+    <button class="btn primary block" data-a="closeModal">${news.length || li.level > lvBefore ? '¡Genial!' : 'Seguir'}</button></div>`);
 }
 
 function routineCard(r, editable) {
@@ -1359,6 +1409,15 @@ const A = {
   nav(b) { view = b.dataset.view; draft = null; render(); scrollTo(0, 0); },
   go(b, i, j, id) { view = id; draft = null; render(); scrollTo(0, 0); },
   goBody() { view = 'progress'; progTab = 'body'; render(); scrollTo(0, 0); },
+  photoDel() { db.user.photo = ''; save(); render(); },
+  medal(b, i, j, id) {
+    const m = medalStates().find(x => x.id === id);
+    if (m.secret) return showModal(`<div class="celeb">${medalSvg(m, 110)}<h3>${m.tier >= 0 ? esc(m.name) : '???'}</h3>
+      <p class="muted center">${m.tier >= 0 ? esc(m.how) : 'Medalla secreta: sigue entrenando para descubrirla.'}</p><button class="btn block" data-a="closeModal">Cerrar</button></div>`);
+    showModal(`<div class="celeb">${medalSvg(m, 110)}<h3>${esc(medalName(m))}</h3><p class="muted center">Tu mejor marca: <b>${fmtMedal(m.value)}</b> ${esc(m.unit)}</p>
+      <div class="tiers">${TIERS.map(([n, c1, c2], k) => `<div class="${m.tier >= k ? 'ok' : ''}"><i style="background:linear-gradient(135deg,${c1},${c2})"></i><span>${n}${k === 5 ? ` · «${esc(m.master)}»` : ''}</span><b>${fmtMedal(m.th[k])}</b>${m.tier >= k ? ic('check', 16) : ''}</div>`).join('')}</div>
+      <p class="muted small center">${esc(m.unit)}</p><button class="btn block" data-a="closeModal">Cerrar</button></div>`);
+  },
   goProfile() { A.goBody(); },
   goMuscles() { view = 'progress'; progTab = 'muscles'; musWeek = 0; render(); scrollTo(0, 0); },
   musWeek(b, i, j) { musWeek = Math.min(0, musWeek + j); render(); },
@@ -1504,14 +1563,16 @@ const A = {
     }
     const pending = w.exercises.reduce((n, x) => n + x.sets.filter(s => !s.done).length, 0);
     if (pending && !(await uiConfirm('No has completado todas las series. ¿Quieres terminar el entrenamiento?', 'Terminar'))) return;
+    const medBefore = medalKey(medalStates()), lvBefore = levelInfo().level;
     db.history.push({ id: uid(), name: w.name, routineId: w.routineId, start: w.start, end: Date.now(), exercises,
       bodyKg: bodyWeight() || 0, kcal: totals.rmr ? Math.round(totals.kcal) : null });
-    if (totals.rmr) setTimeout(() => toast(`Entreno guardado · ≈ ${fkg(totals.kcal)} kcal · ${fkg(totals.vol)} kg`), 300);
+    const gain = workoutVolume(db.history[db.history.length - 1]);
     db.active = null; save(); releaseAwake();
     openHist = db.history[db.history.length - 1].id;
     calDay = dayKey(w.start);
     calMonth = new Date(new Date(w.start).getFullYear(), new Date(w.start).getMonth(), 1).getTime();
     view = 'calendar'; render(); scrollTo(0, 0);
+    celebrate(gain, medBefore, medalStates(), lvBefore);
   },
   async saveAsRoutine() {
     const w = db.active;
@@ -1672,6 +1733,19 @@ document.addEventListener('click', e => {
   A[b.dataset.a](b, +b.dataset.i, +b.dataset.j, b.dataset.id, e);
 });
 
+// Foto de perfil: se recorta en cuadrado y se reduce a 256 px (JPEG) para guardarla en el móvil
+async function setPhoto(file) {
+  try {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.src = url; await img.decode();
+    const S = 256, c = document.createElement('canvas'), k = Math.min(img.width, img.height);
+    c.width = c.height = S;
+    c.getContext('2d').drawImage(img, (img.width - k) / 2, (img.height - k) / 2, k, k, 0, 0, S, S);
+    db.user.photo = c.toDataURL('image/jpeg', 0.82);
+    URL.revokeObjectURL(url); save(); render(); toast('Foto actualizada');
+  } catch (e) { uiAlert('No se pudo cargar la imagen. Prueba con otra foto.'); }
+}
+
 // ---------- Campos de texto ----------
 async function onField(e) {
   const el = e.target, f = el.dataset.f;
@@ -1684,6 +1758,9 @@ async function onField(e) {
     case 'rest': w.exercises[i].rest = Math.max(0, parseInt(v) || 0); break;
     case 'w': case 'r': case 'v': case 'g': case 'l': w.exercises[i].sets[j][f] = v.trim(); break;
     case 'pSex': db.profile.sex = v; save(); render(); return;
+    case 'uName': db.user.name = v.slice(0, 40); break;
+    case 'uTitle': db.user.title = v; break;
+    case 'uPhoto': if (el.files[0]) await setPhoto(el.files[0]); return;
     case 'musSel': musSel = v; render(); return;
     case 'pAge': db.profile.birthYear = parseInt(v) > 0 ? new Date().getFullYear() - parseInt(v) : null; break;
     case 'pHeight': db.profile.height = num(v) || null; break;

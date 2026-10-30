@@ -7,6 +7,36 @@ Formato: `mayor.menor.parche`. Sube **menor** con funciones nuevas y **parche** 
 
 ---
 
+## 0.6.0 — Perfil, medallas, niveles y estilo Kingdom · 30 oct 2026
+**Nuevo**
+- **Perfil de usuario** (botón con tu foto arriba a la derecha):
+  - foto desde el móvil, nombre ("Hola, Yago" en Inicio) y título elegible;
+  - medidas básicas y vitrina de medallas.
+- **Experiencia y nivel**:
+  - cada kg levantado (con tu peso corporal en calistenia) es 1 punto;
+  - del nivel 1 al 2 hacen falta 2.000 kg, y cada nivel pide un 12 % más;
+  - se calcula también con todo tu historial;
+  - la barra de experiencia cambia según el estilo.
+- **Títulos**: por nivel (Novato, Aprendiz, Constante, Guerrero, Veterano, Campeón, Élite, Titán, Leyenda, Mito, Inmortal), por medallas en nivel Maestro (p. ej. "Maestro de las dominadas") y por medallas secretas.
+- **20 medallas con 6 niveles** (bronce, plata, oro, platino, diamante y maestro) en 5 categorías:
+  - **Constancia**: entrenos, racha, objetivo semanal.
+  - **Calistenia**: dominadas, fondos, flexiones, muscle up, pino, front lever, L-sit.
+  - **Fuerza**: dominadas y fondos lastrados (% del peso), press banca, sentadilla y peso muerto (× tu peso).
+  - **Volumen**: toneladas, sesión épica, récords.
+  - **Cardio**: km en cinta, calorías.
+  - Además, **4 secretas**.
+- **Celebración al terminar un entreno**: experiencia ganada, subida de nivel y medallas nuevas.
+- **Estilo Kingdom** (inspirado en Kingdom Hearts, con símbolos propios): fondo de retícula con corazones, coronas y estrellas, títulos góticos plateados, detalles dorados, botones tipo "menú de comandos", anillo verde como la barra de vida y **menú inferior con botones de comando** (el activo dorado y con corona).
+- **Icono nuevo** de la app.
+
+**Cambiado**
+- **Ventanas de aviso propias** en lugar de las del navegador (ya no aparece "yagoperezfel.github.io dice"). Al terminar un entreno:
+  - sin series hechas: "No has completado ninguna serie. ¿Quieres terminar el entrenamiento?";
+  - con series pendientes: "No has completado todas las series. ¿Quieres terminar el entrenamiento?";
+  - con todas hechas: termina directamente.
+
+---
+
 ## 0.5.1 — Correcciones de la primera prueba · 30 oct 2026
 **Corregido**
 - **No se podían guardar las medidas corporales** (detectado en iPhone, pero pasaba en todos los móviles desde la 0.3.0). Al pasar la altura al Perfil, *Guardar medidas* seguía buscando ese campo y daba error.
@@ -116,4 +146,5 @@ Formato: `mayor.menor.parche`. Sube **menor** con funciones nuevas y **parche** 
 | 0.3.1 | 2.3.0 | `f6bc763` |
 | 0.4.0 | 2.4.0 | `8763b87` |
 | 0.5.0 | 2.5.0 | `f220405` |
-| 0.5.1 | — | correcciones |
+| 0.5.1 | — | `f69256f` |
+| 0.6.0 | — | perfil, medallas, Kingdom |

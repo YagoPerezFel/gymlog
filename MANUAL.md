@@ -2,7 +2,7 @@
 
 Guía para entender cómo está hecha la app, qué hace cada archivo y cada función, y cómo modificarla o publicar cambios.
 
-**Versión descrita:** 0.5.1 · Historial de cambios: [CHANGELOG.md](CHANGELOG.md)
+**Versión descrita:** 0.6.0 · Historial de cambios: [CHANGELOG.md](CHANGELOG.md)
 **App publicada:** https://yagoperezfel.github.io/gymlog/
 **Código:** https://github.com/YagoPerezFel/gymlog
 
@@ -30,6 +30,7 @@ Guía para entender cómo está hecha la app, qué hace cada archivo y cada func
 18. [Calorías, kg levantados y mapa muscular (v0.3)](#18-calorías-kg-levantados-y-mapa-muscular-v03)
 19. [Tipos de serie, RPE, progresión, gráficas y compartir (v0.4)](#19-tipos-de-serie-rpe-progresión-gráficas-y-compartir-v04)
 20. [Estilos: oscuro, claro y Persona (v0.5)](#20-estilos-oscuro-claro-y-persona-v05)
+21. [Perfil, medallas, experiencia y avisos propios (v0.6)](#21-perfil-medallas-experiencia-y-avisos-propios-v06)
 
 ---
 
@@ -72,13 +73,15 @@ Es **JavaScript "puro"** (en inglés *vanilla JS*): no usa frameworks como React
 ```
 AppGym/
 ├── index.html      Página principal: estructura HTML + todo el CSS (diseño)
+├── medals.js       Medallas, experiencia, niveles, títulos y dibujo de las medallas
 ├── data.js         Datos fijos: músculos, ejercicios por defecto, valores MET, cardio y dibujo del cuerpo
 ├── app.js          Toda la lógica de la app (≈1400 líneas)
 ├── sw.js           Service worker: funcionamiento sin conexión, caché y notificaciones
 ├── manifest.json   Datos para instalar la app (nombre, icono, colores)
 ├── version.json    Versión publicada + lista de archivos (lo usa el botón de actualizar)
 ├── catalog.json    Catálogo de 873 ejercicios con foto (para el buscador del catálogo)
-├── icon.svg        Icono vectorial
+├── favicon.png     Icono de la pestaña del navegador
+├── icon-180.png    Icono de iPhone (pantalla de inicio)
 ├── icon-192.png    Icono 192×192 (Android / iPhone)
 ├── icon-512.png    Icono 512×512 (pantalla de carga de Android)
 ├── README.md       Resumen corto del proyecto
@@ -825,3 +828,46 @@ Se cambian en **Ajustes → Estilo** y se guardan en `db.settings.theme` (`dark`
 3. Si quieres, añade reglas `[data-theme=clave] .card{...}` para formas propias.
 
 > La imagen de **Compartir entreno** siempre usa colores oscuros fijos, porque se dibuja en un `<canvas>` donde no existen las variables CSS.
+
+---
+
+## 21. Perfil, medallas, experiencia y avisos propios (v0.6)
+
+### 21.1 Perfil (`vUser()` en `app.js`)
+Se abre con el botón redondo de arriba a la derecha (`avatarBtn()`), que muestra tu foto (o tus iniciales) y tu nivel. Datos en `db.user`:
+```js
+{ name: "Yago", photo: "data:image/jpeg;base64,...", title: "Maestro de las dominadas" }
+```
+- **Foto** (`setPhoto()`): se recorta en cuadrado y se reduce a 256×256 px en JPEG (unos 20-40 KB) para guardarla en el móvil con el resto de datos. Se exporta con la copia de seguridad.
+- **Nombre**: se usa en el saludo de Inicio ("Hola, Yago").
+- **Título**: eliges entre los desbloqueados (`unlockedTitles()`). Queda guardado para la futura parte social.
+
+### 21.2 Experiencia y nivel (`medals.js`)
+```
+XP total = suma de los kg levantados en todos tus entrenos      (totalXP)
+XP para pasar del nivel n al n+1 = 2.000 × 1,12^(n-1)           (xpForLevel)
+   → nivel 1→2: 2.000 · 2→3: 2.240 · 3→4: 2.509 · 10→11: 6.210 · 20→21: 19.290
+```
+`levelInfo()` devuelve el nivel, lo que llevas del actual y lo que te falta. `xpBar()` dibuja la barra; su aspecto cambia con el estilo mediante las reglas `.xp` de cada tema en `index.html`. Los cardio sin kg no dan experiencia.
+
+### 21.3 Medallas
+- **Catálogo**: `MEDAL_DEFS`, con id, categoría, nombre, título de Maestro, pictograma, los **6 umbrales** (bronce → maestro), la estadística que mide y la unidad. Las secretas están en `SECRET_DEFS`.
+- **Estadísticas**: `computeStats()` recorre todo el historial y calcula: entrenos, mejor racha, semanas con el objetivo, máximo de repeticiones por familia (dominadas, fondos, flexiones, muscle up), segundos en estáticos, lastre en % de tu peso, fuerza relativa (1RM estimado ÷ tu peso), toneladas, km de cinta, récords y calorías. Las series de calentamiento no cuentan.
+- **Estado**: `medalStates()` compara cada estadística con sus umbrales y da el nivel conseguido y la siguiente meta.
+- **Dibujo**: `medalSvg()` genera un escudo hexagonal con el degradado del nivel (`TIERS`). Desde Oro gana alas, desde Diamante destellos y en Maestro una corona. El pictograma del centro sale de `GLYPHS`.
+- **Celebración**: `finish()` guarda el estado antes y después del entreno y `celebrate()` muestra la experiencia ganada, si subes de nivel y las medallas nuevas.
+
+**Añadir una medalla**: añade una fila a `MEDAL_DEFS` y, si mide algo nuevo, calcula ese valor en `computeStats()`.
+
+### 21.4 Ventanas de aviso propias
+`uiDialog()`, `uiAlert()`, `uiConfirm()` y `uiPrompt()` sustituyen a `alert`/`confirm`/`prompt` del navegador, que ponen "*dirección* dice" y no se pueden personalizar. Devuelven una **promesa**: las funciones que preguntan algo son `async` y esperan la respuesta con `await`:
+```js
+if (!(await uiConfirm('¿Eliminar este registro?', 'Eliminar', true))) return;
+```
+
+### 21.5 Estilo Kingdom
+Es otro bloque `:root[data-theme=kingdom]` (ver sección 20).
+- El fondo y la franja inferior son **SVG propios** (corazones, coronas, estrellas) incrustados en el CSS como `data:image/svg+xml`.
+- Los botones usan la variable `--cmd`, el degradado azul tipo "menú de comandos".
+- El menú inferior convierte cada botón en una tecla de comando inclinada; la activa es dorada y lleva una corona (`nav button.on::before`).
+- Fuentes de Google: **Grenze Gotisch** (títulos) y **Cinzel** (subtítulos).

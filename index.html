@@ -398,6 +398,74 @@ a.btn{text-decoration:none}
 [data-theme=kingdom] .sug{background:rgba(58,109,240,.14);border:1px solid rgba(58,109,240,.4)}
 [data-theme=kingdom] .live{border-color:#e8c66a;box-shadow:0 0 22px rgba(232,198,106,.25)}
 
+
+/* ================= v0.6: perfil, medallas y experiencia ================= */
+.avatar{width:46px;height:46px;border-radius:50%;padding:0;border:2px solid var(--ac);background:var(--card-hi);color:var(--tx);position:relative;flex:0 0 auto;cursor:pointer;overflow:visible}
+.avatar>img,.avatar>span{width:100%;height:100%;border-radius:50%;object-fit:cover;display:flex;align-items:center;justify-content:center;font:700 15px var(--font);overflow:hidden}
+.avatar .lvb{position:absolute;right:-6px;bottom:-4px;min-width:20px;height:20px;padding:0 4px;border-radius:10px;background:var(--ac);color:var(--on-ac);font:800 11px/20px var(--font);font-style:normal;text-align:center;border:2px solid var(--bg)}
+.ucard{display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:22px}
+.bigav{width:112px;height:112px;border-radius:50%;border:3px solid var(--ac);position:relative;cursor:pointer;display:block;box-shadow:0 0 24px rgba(var(--hl),.25)}
+.bigav>img,.bigav>span{width:100%;height:100%;border-radius:50%;object-fit:cover;display:flex;align-items:center;justify-content:center;font:700 36px var(--font);background:var(--field);overflow:hidden}
+.bigav .cam{position:absolute;right:0;bottom:2px;width:32px;height:32px;border-radius:50%;background:var(--ac);color:var(--on-ac);display:flex;align-items:center;justify-content:center}
+.uname{text-align:center;font-size:22px;font-weight:700;background:transparent;border-color:transparent;max-width:300px}
+.uname:focus{background:var(--field)}
+.utitle{width:auto;min-height:36px;padding:4px 14px;border-radius:18px;text-align:center;font-weight:600;color:var(--ac)}
+.xpw{width:100%;display:grid;grid-template-columns:auto 1fr;gap:6px 12px;align-items:center}
+.xpw small{grid-column:1/-1;text-align:right;color:var(--mut);font-size:12px}
+.lvl{font-size:13px;color:var(--mut);white-space:nowrap}.lvl b{font-size:20px;color:var(--tx);margin-left:3px}
+.xp{height:10px;border-radius:6px;background:var(--field);overflow:hidden}
+.xp i{display:block;height:100%;background:var(--ac);border-radius:6px;box-shadow:0 0 10px rgba(var(--hl),.6);transition:width .6s}
+.meas{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.meas>div{background:var(--field);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column}
+.meas small{color:var(--mut);font-size:11px}.meas b{font-size:15px}
+.mcat{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin:18px 4px 8px}
+.medals{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.mcard{background:linear-gradient(180deg,var(--card-hi),var(--card));border:1px solid var(--line);border-radius:18px;padding:12px 6px 10px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--tx);font:inherit;cursor:pointer;min-width:0}
+.mcard b{font-size:12px;line-height:1.2;text-align:center;margin-top:4px}
+.mcard small{font-size:11px;color:var(--mut)}
+.mcard.off b{color:var(--mut)}
+.mcard .mnum{font-size:10px}
+.mprog{width:80%;height:4px;border-radius:2px;background:var(--field);margin-top:5px;overflow:hidden}.mprog i{display:block;height:100%;background:var(--ac)}
+svg.medal{filter:drop-shadow(0 4px 10px rgba(0,0,0,.45))}
+svg.medal.locked{filter:grayscale(1) brightness(.55);opacity:.55}
+.celeb{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px}
+.celeb h3{font-size:30px;margin:0}
+.lvup{background:linear-gradient(135deg,rgba(var(--hl),.25),transparent);border:1px solid rgba(var(--hl),.5);border-radius:16px;padding:10px 16px;font-weight:800;font-size:18px;width:100%}
+.lvup small{display:block;font-weight:500;font-size:13px;color:var(--mut)}
+.cmed{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--field);border-radius:16px;padding:6px 12px}
+.cmed small{display:block;color:var(--mut)}
+.tiers{width:100%;display:flex;flex-direction:column;gap:6px;margin:6px 0}
+.tiers>div{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:12px;background:var(--field);color:var(--mut)}
+.tiers>div.ok{color:var(--tx)}
+.tiers i{width:16px;height:16px;border-radius:5px;transform:rotate(45deg);flex:0 0 auto}
+.tiers span{flex:1;text-align:left;font-size:14px}
+/* barra de experiencia según el estilo */
+[data-theme=light] .xp i{background:linear-gradient(90deg,#ff9f0a,#ff2d55)}
+[data-theme=persona] .xp{height:16px;border-radius:0;background:#000;border:2px solid #fff;transform:skew(-18deg)}
+[data-theme=persona] .xp i{border-radius:0;background:repeating-linear-gradient(-45deg,#e5141b 0 8px,#9d0b10 8px 16px);box-shadow:none}
+[data-theme=persona] .lvl{font-family:var(--title-font);text-transform:uppercase;color:#fff;background:#e5141b;padding:0 8px;transform:skew(-10deg)}
+[data-theme=persona] .lvl b{color:#fff}
+[data-theme=persona] .avatar,[data-theme=persona] .bigav{border-color:#fff;box-shadow:5px 5px 0 #e5141b}
+[data-theme=persona] .mcard{border:2px solid #fff;border-radius:0;box-shadow:4px 4px 0 #e5141b}
+[data-theme=kingdom] .xp{height:14px;border-radius:8px;background:#06102e;border:2px solid #c9cbd6;box-shadow:inset 0 2px 4px rgba(0,0,0,.7)}
+[data-theme=kingdom] .xp i{background:linear-gradient(180deg,#b8ffbd 0,#5fe06a 40%,#2f9a3a 60%,#1f6e28 100%);box-shadow:0 0 10px rgba(95,224,106,.7)}
+[data-theme=kingdom] .lvl{font-family:'Cinzel',Georgia,serif;color:#e8c66a;letter-spacing:.06em}
+[data-theme=kingdom] .lvl b{color:#fff3c4;text-shadow:0 0 8px rgba(232,198,106,.8)}
+[data-theme=kingdom] .avatar,[data-theme=kingdom] .bigav{border-color:#e8c66a;box-shadow:0 0 14px rgba(232,198,106,.45)}
+[data-theme=kingdom] .avatar .lvb{background:var(--cmd);color:#fff;border-color:#c9cbd6}
+[data-theme=kingdom] .mcard{border-color:rgba(201,203,214,.28)}
+/* menú inferior estilo Kingdom: botones tipo "comandos" con la activa dorada y una corona encima */
+[data-theme=kingdom] nav{background:transparent;border:0;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;justify-content:center;gap:8px}
+[data-theme=kingdom] nav button{width:56px;height:48px;border-radius:12px;background:var(--cmd);border:2px solid #aeb8d8;color:#fff;transform:skewX(-10deg);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 4px 0 #040a22,0 8px 16px rgba(0,0,0,.6);transition:transform .15s}
+[data-theme=kingdom] nav button svg.i{transform:skewX(10deg);filter:drop-shadow(0 1px 1px rgba(0,0,0,.6))}
+[data-theme=kingdom] nav button.on{background:linear-gradient(180deg,#fff6cf 0,#e8c66a 45%,#b98b2a 55%,#7a5512 100%);border-color:#fff7d6;color:#2a1d05;
+  transform:skewX(-10deg) translateY(-8px) scale(1.08);box-shadow:inset 0 1px 0 #fff,0 4px 0 #4a3308,0 0 22px rgba(232,198,106,.65)}
+[data-theme=kingdom] nav button.on svg.i{filter:none}
+[data-theme=kingdom] nav button.on::before{content:"";position:absolute;top:-17px;left:50%;width:20px;height:14px;transform:translateX(-50%) skewX(10deg);
+  background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2014%22%3E%3Cpath%20d%3D%22M1%2013L2%203L6.5%207.5L10%200L13.5%207.5L18%203L19%2013Z%22%20fill%3D%22%23e8c66a%22%20stroke%3D%22%23fff6cf%22%20stroke-width%3D%221%22/%3E%3C/svg%3E") center/contain no-repeat;filter:drop-shadow(0 0 4px rgba(232,198,106,.9))}
+[data-theme=kingdom] nav button.live::after{background:#5fe06a;box-shadow:0 0 6px #5fe06a;top:4px;right:5px}
+
 /* ventanas de aviso propias */
 #dialog{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:60;display:flex;align-items:center;justify-content:center;padding:24px}
 .dlg{background:var(--sheet);color:var(--tx);border:1px solid var(--line);border-radius:24px;padding:22px 20px 18px;max-width:360px;width:100%;box-shadow:var(--pop)}
@@ -425,6 +493,7 @@ a.btn{text-decoration:none}
 <div id="modal" hidden><div class="sheet" id="sheet"></div></div>
 
 <script src="data.js"></script>
+<script src="medals.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
